@@ -238,6 +238,51 @@ class AnswerQualityContracts(Fixtures):
             self.assertFalse(grade.sufficient)
             self.assertFalse(grade.eligible_ids)
 
+    def test_public_host_discovery_is_safe_and_opt_in(self):
+        """公网 IP 自动发现：可关闭、拿不到时安静跳过、绝不把 HTML 当主机名。
+
+        背景：按量付费 ECS 的"普通公网 IP"在停止/启动后会被重新分配，
+        而 MED_ALLOWED_ORIGINS 写死旧地址 → 重启后访问得到一个没有说明的 400，
+        看起来像"服务挂了"。所以启动时向元数据服务查一次当前公网 IP。
+        线上实测：eipv4 返回真 IP，而 public-ipv4 返回 404 HTML 页面，
+        因此格式校验是必需的 —— 否则整段 HTML 会被塞进主机白名单。
+        """
+        from unittest.mock import patch
+
+        from Application import MedicalApplication
+
+        class FakeResponse:
+            def __init__(self, payload):
+                self.payload = payload
+
+            def read(self, _n=None):
+                return self.payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        # 关闭时完全不联网
+        off = self.settings.model_copy(update={"discover_public_host": False})
+        self.assertEqual(MedicalApplication.discovered_hosts(off), set())
+
+        on = self.settings.model_copy(update={"discover_public_host": True})
+
+        # 元数据服务不可达 → 安静返回空集合，不能抛异常影响启动
+        with patch("urllib.request.urlopen", side_effect=OSError("unreachable")):
+            self.assertEqual(MedicalApplication.discovered_hosts(on), set())
+
+        # 返回 HTML 404 页面时不能被当成主机名
+        html = b'<?xml version="1.0"?><html>404 Not Found</html>'
+        with patch("urllib.request.urlopen", return_value=FakeResponse(html)):
+            self.assertEqual(MedicalApplication.discovered_hosts(on), set())
+
+        # 合法 IP 才会被采纳
+        with patch("urllib.request.urlopen", return_value=FakeResponse(b"47.242.164.211")):
+            self.assertEqual(MedicalApplication.discovered_hosts(on), {"47.242.164.211"})
+
     def test_short_personal_symptom_requests_ask_context_without_assigning_a_child(self):
         analysis = QueryAnalyzer(self.corpus).analyze("肚子疼怎么办")
         self.assertTrue(analysis.needs_clarification)

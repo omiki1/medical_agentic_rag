@@ -41,6 +41,8 @@ class Fixtures(unittest.TestCase):
             neo4j_uri="",
             jwt_secret="test-only-secret-do-not-deploy",
             requests_per_minute=120,
+            # 测试不联网：公网 IP 自动发现只在真实部署时使用。
+            discover_public_host=False,
         )
         cls.corpus = MedicalCorpus(cls.data)
         cls.retriever = HybridRetriever(cls.corpus, cls.settings)

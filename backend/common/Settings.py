@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     neo4j_timeout: float = Field(default=4, ge=1, le=10)
     pubmed_enabled: bool = False
     pubmed_email: str = ""
+    # 是否在启动时向云厂商元数据服务查询本机当前公网 IP，并加入 Host 白名单。
+    # 按量付费 ECS 的"普通公网 IP"在停止/启动后会被重新分配，写死在
+    # MED_ALLOWED_ORIGINS 里的地址随即失效，访问会得到一个没有说明的 400。
+    # 打开后重启无需改配置。测试里关掉，避免联网。
+    discover_public_host: bool = True
     requests_per_minute: int = Field(default=20, ge=1, le=120)
     redis_url: str = Field(default="", repr=False)
     redis_password: str = Field(default="", validation_alias="REDIS_PASSWORD", repr=False)
