@@ -1,0 +1,615 @@
+{
+  "nodes_csv": "nodes.csv",
+  "disease_csv": "disease.csv",
+  "rels_csv_split": 101,
+  "rel_statements": 101,
+  "rels_total": 383229,
+  "triples": [
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Disease",
+      "count": 12
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Symptom",
+      "count": 3
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Category",
+      "count": 5
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Department",
+      "count": 3
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Disease",
+      "count": 2
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Check",
+      "count": 20
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_CUREWAY",
+      "blabel": "Cureway",
+      "count": 6
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Category",
+      "count": 3
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Department",
+      "count": 3
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Disease",
+      "count": 2
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_DISHES",
+      "blabel": "Dishes",
+      "count": 16
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_DO_EAT",
+      "blabel": "Food",
+      "count": 8
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_DRUG",
+      "blabel": "Drug",
+      "count": 19
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_NOT_EAT",
+      "blabel": "Food",
+      "count": 8
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Disease",
+      "count": 4
+    },
+    {
+      "alabel": "Category",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Symptom",
+      "count": 17
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Disease",
+      "count": 1
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Symptom",
+      "count": 1
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Category",
+      "count": 3
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Department",
+      "count": 2
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Check",
+      "count": 6
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_CUREWAY",
+      "blabel": "Cureway",
+      "count": 2
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Category",
+      "count": 2
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Department",
+      "count": 2
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_DRUG",
+      "blabel": "Drug",
+      "count": 5
+    },
+    {
+      "alabel": "Check",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Symptom",
+      "count": 3
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Disease",
+      "count": 1
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Category",
+      "count": 3
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Department",
+      "count": 2
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Check",
+      "count": 6
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_CUREWAY",
+      "blabel": "Cureway",
+      "count": 2
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Category",
+      "count": 2
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Department",
+      "count": 2
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_DISHES",
+      "blabel": "Dishes",
+      "count": 8
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_DO_EAT",
+      "blabel": "Food",
+      "count": 4
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_DRUG",
+      "blabel": "Drug",
+      "count": 5
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_NOT_EAT",
+      "blabel": "Food",
+      "count": 4
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Disease",
+      "count": 2
+    },
+    {
+      "alabel": "Cureway",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Symptom",
+      "count": 7
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Disease",
+      "count": 12
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Symptom",
+      "count": 3
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Category",
+      "count": 5
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Department",
+      "count": 3
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Disease",
+      "count": 2
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Check",
+      "count": 20
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_CUREWAY",
+      "blabel": "Cureway",
+      "count": 6
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Category",
+      "count": 3
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Department",
+      "count": 3
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Disease",
+      "count": 2
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_DISHES",
+      "blabel": "Dishes",
+      "count": 16
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_DO_EAT",
+      "blabel": "Food",
+      "count": 8
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_DRUG",
+      "blabel": "Drug",
+      "count": 19
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_NOT_EAT",
+      "blabel": "Food",
+      "count": 8
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Disease",
+      "count": 4
+    },
+    {
+      "alabel": "Department",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Symptom",
+      "count": 17
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Category",
+      "count": 34
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Check",
+      "count": 2
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Department",
+      "count": 34
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Disease",
+      "count": 12024
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Symptom",
+      "count": 4408
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Category",
+      "count": 25587
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Department",
+      "count": 16781
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Disease",
+      "count": 80
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Check",
+      "count": 39418
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Disease",
+      "count": 1
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Symptom",
+      "count": 57
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CUREWAY",
+      "blabel": "Cureway",
+      "count": 21047
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_CUREWAY",
+      "blabel": "Disease",
+      "count": 2
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Category",
+      "count": 16781
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Department",
+      "count": 16781
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Disease",
+      "count": 80
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DISHES",
+      "blabel": "Dishes",
+      "count": 40221
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DISHES",
+      "blabel": "Food",
+      "count": 20
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DO_EAT",
+      "blabel": "Dishes",
+      "count": 28
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DO_EAT",
+      "blabel": "Food",
+      "count": 22230
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_DRUG",
+      "blabel": "Drug",
+      "count": 59736
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_NOT_EAT",
+      "blabel": "Food",
+      "count": 22239
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Check",
+      "count": 101
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Disease",
+      "count": 11519
+    },
+    {
+      "alabel": "Disease",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Symptom",
+      "count": 54710
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Category",
+      "count": 3
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Department",
+      "count": 3
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Disease",
+      "count": 616
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_ACOMPANY",
+      "blabel": "Symptom",
+      "count": 218
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Category",
+      "count": 1204
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Department",
+      "count": 786
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_CATEGORY",
+      "blabel": "Disease",
+      "count": 4
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Check",
+      "count": 2016
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_CHECK",
+      "blabel": "Symptom",
+      "count": 3
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_CUREWAY",
+      "blabel": "Cureway",
+      "count": 956
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Category",
+      "count": 786
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Department",
+      "count": 786
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_DEPARTMENT",
+      "blabel": "Disease",
+      "count": 4
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_DISHES",
+      "blabel": "Dishes",
+      "count": 2542
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_DISHES",
+      "blabel": "Food",
+      "count": 2
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_DO_EAT",
+      "blabel": "Food",
+      "count": 1343
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_DRUG",
+      "blabel": "Drug",
+      "count": 3097
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_NOT_EAT",
+      "blabel": "Food",
+      "count": 1344
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Check",
+      "count": 2
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Disease",
+      "count": 557
+    },
+    {
+      "alabel": "Symptom",
+      "rtype": "DISEASE_SYMPTOM",
+      "blabel": "Symptom",
+      "count": 2699
+    }
+  ]
+}

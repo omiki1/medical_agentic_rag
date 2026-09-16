@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediAtlas 医学证据工作台 · 项目详解</title>
+<style>
+:root{
+  --ink:#1f2733; --muted:#5b6472; --faint:#8a93a3; --line:#e4e8ee;
+  --brand:#0b6e5c; --brand-deep:#085247; --brand-soft:#e9f5f1;
+  --violet:#6d28d9; --violet-soft:#f1ebfb;
+  --blue:#2563eb; --sky:#0ea5e9;
+  --amber:#b45309; --amber-soft:#fdf3e3;
+  --red:#dc2626; --red-soft:#fdecec;
+  --green:#16a34a; --green-soft:#e9f7ee;
+  --paper:#ffffff; --page:#f6f7f9;
+}
+*{box-sizing:border-box;}
+html{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:14px; line-height:1.75;
+}
+.page{max-width:900px; margin:0 auto; background:var(--paper); padding:56px 64px; box-shadow:0 0 0 1px var(--line);}
+.wrap{max-width:900px; margin:0 auto;}
+
+/* ---------- 封面 ---------- */
+.cover{background:linear-gradient(150deg,#0b6e5c 0%,#0a5546 55%,#072f2a 100%); color:#fff;
+  min-height:90vh; display:flex; flex-direction:column; justify-content:center; padding:72px; position:relative; overflow:hidden;}
+.cover::after{content:""; position:absolute; right:-120px; top:-120px; width:440px; height:440px;
+  background:radial-gradient(circle, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 70%);}
+.cover .eyebrow{letter-spacing:.35em; font-size:12px; color:#9fd8c8; text-transform:uppercase; margin-bottom:18px;}
+.cover h1{font-size:52px; line-height:1.12; margin:0 0 8px; font-weight:800; letter-spacing:.5px;}
+.cover h2{font-size:22px; font-weight:500; color:#c9ece2; margin:0 0 36px;}
+.cover .sub{max-width:640px; color:#dceee8; font-size:15px; border-left:3px solid #35b898; padding-left:18px; margin:0 0 42px;}
+.cover .meta{display:flex; flex-wrap:wrap; gap:10px; font-size:12.5px;}
+.cover .meta span{background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); padding:6px 12px; border-radius:20px;}
+.cover .disclaimer{margin-top:48px; font-size:12px; color:#8fc9b8;}
+
+/* ---------- 目录 ---------- */
+.toc h2{font-size:26px; border-bottom:3px solid var(--brand); padding-bottom:10px; margin:0 0 20px;}
+.toc ol{list-style:none; counter-reset:t; padding:0; margin:0;}
+.toc li{counter-increment:t; padding:10px 0; border-bottom:1px dashed var(--line); font-size:15px;}
+.toc li::before{content:counter(t,decimal-leading-zero); color:var(--brand); font-weight:700; font-family:ui-monospace,monospace; margin-right:14px;}
+.toc .part{font-weight:700;}
+
+/* ---------- 通用标题 ---------- */
+h2.chapter{font-size:27px; margin:8px 0 6px; letter-spacing:-.3px; color:#111826;}
+h2.chapter .no{color:var(--brand); font-family:ui-monospace,monospace; font-size:20px; margin-right:12px; background:var(--brand-soft); padding:4px 10px; border-radius:8px; vertical-align:3px;}
+h3{font-size:19px; margin:34px 0 10px; padding-left:12px; border-left:4px solid var(--brand);}
+h4{font-size:15.5px; margin:26px 0 8px; color:var(--brand-deep);}
+p{margin:10px 0;}
+.lead{font-size:15.5px; color:#2b3342;}
+.muted{color:var(--muted);}
+.chapter-block{page-break-before:always;}
+
+/* ---------- 图 ---------- */
+.figure{margin:26px 0; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff;}
+.figure svg{display:block; width:100%; height:auto; background:#fbfcfe;}
+.figure figcaption{padding:10px 16px; font-size:12.5px; color:var(--muted); background:#fafbfc; border-top:1px solid var(--line);}
+.figure figcaption b{color:var(--ink);}
+.figtitle{font-weight:700; color:var(--brand-deep);}
+
+/* ---------- 代码 ---------- */
+.code{margin:20px 0; border:1px solid #dfe4ec; border-radius:12px; overflow:hidden; background:#0f172a;}
+.code .codebar{display:flex; align-items:center; gap:8px; padding:8px 14px; background:#1e293b; color:#94a3b8; font-size:12px; font-family:ui-monospace,monospace;}
+.code .codebar .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.code pre{margin:0; padding:16px 18px; overflow-x:auto; color:#e2e8f0; font-family:ui-monospace,"Cascadia Code","Consolas",monospace; font-size:12.3px; line-height:1.65; white-space:pre;}
+.code .cm{color:#7dd3a8;} .code .ck{color:#93c5fd;} .code .cs{color:#fbbf24;} .code .cf{color:#c084fc;} .code .cc{color:#64748b;}
+.annotate{background:#f6f8fb; border:1px solid var(--line); border-left:3px solid var(--violet); border-radius:0 10px 10px 0; padding:12px 16px; margin:-8px 0 22px; font-size:13px;}
+.annotate ul{margin:6px 0; padding-left:20px;}
+.annotate b{color:var(--violet);}
+
+/* ---------- 提示块 ---------- */
+.callout{border-radius:12px; padding:14px 18px; margin:18px 0; border:1px solid; font-size:13.5px;}
+.callout .ttl{font-weight:700; display:block; margin-bottom:4px;}
+.callout.note{background:#eef4ff; border-color:#c7d9fb; color:#1d3a6e;} .callout.note .ttl{color:#1d4ed8;}
+.callout.tip{background:var(--green-soft); border-color:#bce7c9; color:#14532d;} .callout.tip .ttl{color:#15803d;}
+.callout.warn{background:var(--amber-soft); border-color:#f3d9a8; color:#6c3b06;} .callout.warn .ttl{color:#b45309;}
+.callout.key{background:var(--violet-soft); border-color:#ddd0f5; color:#3b1f6b;} .callout.key .ttl{color:#6d28d9;}
+.callout.danger{background:var(--red-soft); border-color:#f3c2c2; color:#7f1d1d;} .callout.danger .ttl{color:#dc2626;}
+
+/* ---------- 表格 ---------- */
+table{width:100%; border-collapse:collapse; margin:18px 0; font-size:13px;}
+th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top;}
+th{background:#f2f6f4; color:var(--brand-deep); font-weight:700;}
+tr:nth-child(even) td{background:#fafbfc;}
+table.plain td{background:#fff;}
+
+/* ---------- 术语 / 卡 ---------- */
+.term{border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin:10px 0; background:#fff;}
+.term b{color:var(--brand-deep);}
+.term .en{color:var(--faint); font-family:ui-monospace,monospace; font-size:12px; margin-left:6px;}
+.kv{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0;}
+.kv span{background:#f1f4f8; border:1px solid var(--line); border-radius:8px; padding:4px 10px; font-size:12.5px; font-family:ui-monospace,monospace;}
+.tag{display:inline-block; background:var(--brand-soft); color:var(--brand-deep); border-radius:6px; padding:2px 8px; font-size:12px; font-weight:600;}
+
+/* ---------- 目录树 ---------- */
+.tree{font-family:ui-monospace,"Consolas",monospace; font-size:12.5px; background:#0f172a; color:#cbd5e1; border-radius:12px; padding:18px 20px; overflow-x:auto; line-height:1.7; white-space:pre;}
+
+/* ---------- 面试卡 ---------- */
+.qa{border:1px solid var(--line); border-radius:12px; margin:14px 0; overflow:hidden;}
+.qa .q{background:var(--violet-soft); color:#3b1f6b; font-weight:700; padding:11px 16px;}
+.qa .a{padding:12px 16px; font-size:13.5px;}
+
+/* ---------- 打印 ---------- */
+@page{size:A4; margin:16mm 14mm;}
+@media print{
+  body{background:#fff;}
+  .page{box-shadow:none; padding:0; max-width:none;}
+  .cover{min-height:96vh; page-break-after:always;}
+  .chapter-block{page-break-before:always;}
+  .figure, .code, .callout, table, .term, .qa, .tree{page-break-inside:avoid;}
+  a{color:inherit; text-decoration:none;}
+  h2.chapter,h3,h4{page-break-after:avoid;}
+}
+</style>
+</head>
+<body>
+
+<!-- 全局 SVG 箭头定义 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6d28d9"/>
+    </marker>
+    <marker id="arrow-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="arrow-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+</svg>
+
+<!-- ============ 封面 ============ -->
+<section class="cover">
+  <div class="eyebrow">Technical Deep-Dive · 内部熟悉文档</div>
+  <h1>MediAtlas<br>医学证据工作台</h1>
+  <h2>一个「可验证、有边界」的医学资料检索 RAG + Agent 系统</h2>
+  <p class="sub">本手册从技术栈出发，沿着「一条问题从进入系统到产生可追溯答案」的主线，
+  拆解感知、规划、检索、融合、校验、反思、记忆与评测的完整链路，并逐段讲解关键代码。</p>
+  <div class="meta">
+    <span>FastAPI · Python 3.12</span>
+    <span>Vue 3 · Vite</span>
+    <span>BM25 + Dense + Graph RAG</span>
+    <span>手写有界 Agent 状态机</span>
+    <span>四层记忆</span>
+    <span>SQLite / MySQL / PostgreSQL</span>
+    <span>Neo4j · Redis · Chroma</span>
+  </div>
+  <p class="disclaimer">⚠ 个人学习与研究作品，尚未经过临床验证。引用可验证 ≠ 临床结论已验证。</p>
+</section>
+
+<!-- ============ 目录 ============ -->
+<section class="page toc">
+  <h2>目录</h2>
+  <ol>
+    <li class="part">项目概览与定位</li>
+    <li class="part">技术栈全景图</li>
+    <li class="part">核心思路主线（先看懂这一章）</li>
+    <li class="part">系统架构与分层</li>
+    <li class="part">一次请求的完整生命周期</li>
+    <li class="part">核心链路逐段详解（感知 → 规划 → 检索 → 融合 → 证据门槛 → 反思 → 答案校验）</li>
+    <li class="part">模型服务与「模型不可越权」原则</li>
+    <li class="part">四层记忆系统</li>
+    <li class="part">数据与灌库（流式 · 版本化 · 幂等）</li>
+    <li class="part">安全工程</li>
+    <li class="part">评测体系与「诚实声明」</li>
+    <li class="part">前端：SSE 流式与证据观察台</li>
+    <li class="part">关键代码逐段详解</li>
+    <li class="part">已知边界与取舍</li>
+    <li class="part">面试问答与术语表</li>
+  </ol>
+</section>

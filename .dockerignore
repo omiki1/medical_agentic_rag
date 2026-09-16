@@ -1,0 +1,47 @@
+# 构建上下文排除项：镜像只需代码 + 前端产物，模型与数据由卷挂载
+.git
+.gitignore
+.github
+
+# 敏感文件：绝不进镜像
+**/.env
+**/.env.*
+!**/.env.production.example
+backend/.env.legacy
+
+# 前端依赖与源码（只保留 dist）
+frontend/node_modules
+frontend/src
+frontend/public
+frontend/*.json
+frontend/*.js
+frontend/*.ts
+frontend/*.html
+!frontend/dist
+
+# 大文件：模型、数据、索引（运行时通过 volume 挂载）
+deploy/models
+data
+
+# 运行时产物
+logs
+tmp
+reports
+.venv
+.tools
+.ruff_cache
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+*.log
+*.sqlite
+*.sqlite3
+*.npy
+
+# 文档与评测（镜像内不需要）
+docs
+evaluation
+tests
+*.md
+!README.md

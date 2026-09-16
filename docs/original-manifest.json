@@ -1,0 +1,382 @@
+[
+  {
+    "path": "backend/generate_secret.py",
+    "sha256": "c2b359410f2f904ecf03d0f4b5c14b62f4ad55c4befa88de7e08992dcb61cfc0"
+  },
+  {
+    "path": "backend/main.py",
+    "sha256": "457445a5674634d2aa08a17266b22939bb2613ac8b6062e732ee85179c17ff6e"
+  },
+  {
+    "path": "backend/test.py",
+    "sha256": "5837021ce2cb2e4c6adba8f3745ff18d8a62b7ae7f8b99242a3df83edc785f4e"
+  },
+  {
+    "path": "backend/agent/AgentToolbox.py",
+    "sha256": "060a8e3a3213034c34f84ac45a41ec5157f6e845b8fdcd94bd2c106016098e61"
+  },
+  {
+    "path": "backend/agent/build_agent.py",
+    "sha256": "37d9dd2557416ae9506e87a30369f23746fc04ac686af5ba2f7b8c7c0f5d8cb8"
+  },
+  {
+    "path": "backend/agent/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/ai/IntentionService.py",
+    "sha256": "bfc39873e43ab5479d4ff8f518b9677f62cb914af5a32dc11e3b01f5a083c525"
+  },
+  {
+    "path": "backend/ai/intentionUtil.py",
+    "sha256": "9a7ac0d1422632f37a57e1ec83157ab4ad92a387685a2b23c86a0acfaa4d102b"
+  },
+  {
+    "path": "backend/ai/LLMService.py",
+    "sha256": "f17785ffd6199cdde6e4fe7f571c7e539a978991a0e965c326bed420bee11795"
+  },
+  {
+    "path": "backend/ai/LoadChroma.py",
+    "sha256": "74addbdea33e130edbb8350d408f57c8abf7ec04ad1c20cba10b878e78de1496"
+  },
+  {
+    "path": "backend/ai/LoadEmbeddingModel.py",
+    "sha256": "23d8f5fb883b12fbcd85885f5ae36378b1b3c0df391569bf77abc9d17a6e8f19"
+  },
+  {
+    "path": "backend/ai/LoadLLM.py",
+    "sha256": "3c0c13d1f9bc72fc3815034df9a7610a402c888c9e5645780eb562c155be63d3"
+  },
+  {
+    "path": "backend/ai/LoadLLM2.py",
+    "sha256": "d5bf136cea4074ec0ba07b23ae08cf563d8c09a470129c18c0b8e9b37f059471"
+  },
+  {
+    "path": "backend/ai/VectorStoreService.py",
+    "sha256": "d091030b0848df0bf2c548a6bf9cd037820158abd18236cb2940b43a16b9b413"
+  },
+  {
+    "path": "backend/ai/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/auth/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/chat/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/common/HashPwdUtil.py",
+    "sha256": "66400e31167e7af0e033ad28bfed414903033460fc0aaf21a6ab7fc0017a85cf"
+  },
+  {
+    "path": "backend/common/JWTDecode.py",
+    "sha256": "4d053367bfb9518e244b8e01d12b317037cb68adfc0f4e66a82e55533ecab83d"
+  },
+  {
+    "path": "backend/common/JWTUtil.py",
+    "sha256": "37419b200bfe1a4ff096cdb0ed9dfa63e456b8f80bb8813e755fc0503c27e5fb"
+  },
+  {
+    "path": "backend/common/MySQLUtil.py",
+    "sha256": "7306da2e210f4fe393be424c135eaa50f8f55b34ac2eec6799a1f6b54404f250"
+  },
+  {
+    "path": "backend/common/RedisUtil.py",
+    "sha256": "371c374920b0559ff49e0cc94947f8dab987ad24af5d1b6db80c7c86eeefba93"
+  },
+  {
+    "path": "backend/common/RolePermission.py",
+    "sha256": "ed12d3174e2f380a6117ed4ffaa39159d5d7ae51d4e3a5b8f3ca0f6c81084165"
+  },
+  {
+    "path": "backend/common/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/create_data/LawDataBuild.py",
+    "sha256": "a0048483c682195ad4d15f8a43fd731f369644abaced830c19b643173180c837"
+  },
+  {
+    "path": "backend/create_data/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/rag/BM25Retriever.py",
+    "sha256": "91b0cc8642863af0598d3dc9eb2ae726570405c1d4fb40e2075ef0451fc04b00"
+  },
+  {
+    "path": "backend/rag/HydeUtil.py",
+    "sha256": "e268697fe343fbedcce9fbbd462fe7330dbc3b763471f62fef24ffc21942a074"
+  },
+  {
+    "path": "backend/rag/RerankerUtil.py",
+    "sha256": "ac4cafa2b207d26794a268b4af8697669ac4d219632d670275de43cda44bfe5c"
+  },
+  {
+    "path": "backend/rag/RRFUtil.py",
+    "sha256": "5526a443be12ec0af3539e4484c8435df5e3e748dafa5d124d8cae176a7c18a3"
+  },
+  {
+    "path": "backend/rag/SummaryHistory.py",
+    "sha256": "150ee26dc74a02f2978c8578f0f330fd3002bf32ca6dbd591ee743b2a758b185"
+  },
+  {
+    "path": "backend/rag/VectorRetriever.py",
+    "sha256": "68006266773f20daafd913d77c4406a3971481ca5e10becda402b1d90145497f"
+  },
+  {
+    "path": "backend/rag/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/user/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/auth/controller/AuthController.py",
+    "sha256": "6fb47bad45bb265a76bd9357460e223c64efbd61d73f5864346f92324dcbb621"
+  },
+  {
+    "path": "backend/auth/controller/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/auth/dao/AuthDao.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/auth/dao/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/auth/entity/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/auth/service/AuthService.py",
+    "sha256": "062aae599182682e8c42955b95ecc88e3251b2f2522868f25d1995da60a0bc92"
+  },
+  {
+    "path": "backend/auth/service/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/chat/controller/ChatController.py",
+    "sha256": "9227f09d679ddb99be42f36a2b8c988b1e267c097602fe91f1a33c5fbf97b6ae"
+  },
+  {
+    "path": "backend/chat/controller/HistoryController.py",
+    "sha256": "b909e5bf735019a611de5df4a4acb9e79da2aff9e2168995ed729b26bcdc3a0f"
+  },
+  {
+    "path": "backend/chat/controller/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/chat/dao/ChatDao.py",
+    "sha256": "787e269ce10609ce3aaade2825996a017e439fac9b5a4cd49aa2702704a00db8"
+  },
+  {
+    "path": "backend/chat/dao/HistoryDao.py",
+    "sha256": "a3b71f13bb83ddf66d9249eb10c57388838f47a50bfc9be4b89686ff7e4fa5c2"
+  },
+  {
+    "path": "backend/chat/dao/HistorySummaryDao.py",
+    "sha256": "00b593e6dd4d0d5668fde0caf2aa4f30fe5f15882c2924c7e48874c86dcc519c"
+  },
+  {
+    "path": "backend/chat/dao/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/chat/entity/ChatEntity.py",
+    "sha256": "55f7f695e4d9666bcee05375d940b377eda2278b7f9adc1514ca6d04e569b93e"
+  },
+  {
+    "path": "backend/chat/entity/ConversationResultEntity.py",
+    "sha256": "db0e3b606de8846fc496fb484f5e6a1e5be2543179b1ee34c83a29130be8b034"
+  },
+  {
+    "path": "backend/chat/entity/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/chat/service/ChatService.py",
+    "sha256": "98c1b4871d4a9145de16a0069f4490d1b2659fe974855be923b2ad4059ab5665"
+  },
+  {
+    "path": "backend/chat/service/HistoryService.py",
+    "sha256": "c7a846ee9cffcb2f8fbe38747f44a5c5a7fd8aeea02acb728919b85710b87692"
+  },
+  {
+    "path": "backend/chat/service/SummaryHistoryService.py",
+    "sha256": "2efabfa677385655c01d0610b0ae33ec83774ccfab4e15e8575449e83b68e491"
+  },
+  {
+    "path": "backend/chat/service/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/user/controller/UserController.py",
+    "sha256": "110a4d4dbd5ec5443f6b28e84a69d0675fb57e11b58dc916089e5564d680b1de"
+  },
+  {
+    "path": "backend/user/controller/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/user/dao/UsersDao.py",
+    "sha256": "5bd13f9bc701ad935d5d54c1031049b0cf863c483b4a888429d98d771995c5c7"
+  },
+  {
+    "path": "backend/user/dao/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/user/entity/UserEntity.py",
+    "sha256": "c209515a123b0c535e113950a366d50a6fcef930950ffe9af313c51ac5f17cc7"
+  },
+  {
+    "path": "backend/user/entity/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "backend/user/service/UserService.py",
+    "sha256": "d68cb5a63ffe3150def9d593c26c4998c4141484b89f0f0d003f43d83cea1f9e"
+  },
+  {
+    "path": "backend/user/service/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "frontend/.gitignore",
+    "sha256": "fe718e7babb14f3cbad2d97f08889b9ce5215ed3fe0e43b2b8cfbfb3b9b844e8"
+  },
+  {
+    "path": "frontend/index.html",
+    "sha256": "ae65ff4f528803cdfdc51974f7435c814fec5170037a937a5b7464d95078cc88"
+  },
+  {
+    "path": "frontend/package-lock.json",
+    "sha256": "1ae4b0033a1c9b8106e53048364a2f347c4cbef2f29d94c8e8ba9d6053eab711"
+  },
+  {
+    "path": "frontend/package.json",
+    "sha256": "319ab933598c7837a5fc652f92cae328a93eaf566ab74aade5cf969ee674088f"
+  },
+  {
+    "path": "frontend/README.md",
+    "sha256": "309627dbb136135f84b9e5d12c06b4261b9b1f8cb169f8cdb8023f867b7a4165"
+  },
+  {
+    "path": "frontend/vite.config.js",
+    "sha256": "eae1855610ac975c5eda00bb6264c82b98df310ebc9e74156b4d440519890425"
+  },
+  {
+    "path": "frontend/public/favicon.svg",
+    "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66"
+  },
+  {
+    "path": "frontend/public/icons.svg",
+    "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a"
+  },
+  {
+    "path": "frontend/src/App.vue",
+    "sha256": "49f32f19ead859619f3cf2f8360c2fef36752372727467b69d1bb52127994a2c"
+  },
+  {
+    "path": "frontend/src/main.js",
+    "sha256": "d69098afb4f0f79adcdf5c4c914f488dce7d6d3e7a16e483e15d5decff421cd3"
+  },
+  {
+    "path": "frontend/src/style.css",
+    "sha256": "e01c45d46771d68440b344afe0577bfc3eaa80e16b38b4c4fcc1f1f926f57e50"
+  },
+  {
+    "path": "frontend/src/assets/vite.svg",
+    "sha256": "5be21acd42eb7b896e517f4e0f0f11eb5c5d9e54fbbcebe9453f033008fcca6f"
+  },
+  {
+    "path": "frontend/src/assets/vue.svg",
+    "sha256": "5532db34f1c52841881bab8aeca6c3e8d092bd21a689a65f4d8f8cf8041eef9d"
+  },
+  {
+    "path": "frontend/src/router/index.js",
+    "sha256": "0bd8b89f8703d451fccef91f01aaaf988d7fc956b8060833ac784503c87c1cea"
+  },
+  {
+    "path": "frontend/src/views/Chat.vue",
+    "sha256": "c6b143e988826c3b87e9d0688294eeb81b3e5cf4cbb68ef6516cdb3e7e254466"
+  },
+  {
+    "path": "frontend/src/views/Login.vue",
+    "sha256": "4ac48fad082ee6a979e409a279a0da319cc0c79e2f13aa69271ceb12e6d49cc3"
+  },
+  {
+    "path": "docs/OO改造指导-哪些需要做成类.md",
+    "sha256": "0cd6dff54f8004cb22c37bad9a06168494d4c57f11d0a06817616682a54bebed"
+  },
+  {
+    "path": "docs/OO改造指导-哪些需要做成类.pdf",
+    "sha256": "7236b247a5a5436b5a0d9eb9fc44c911bf3bc5c78665504f20e798da508a6283"
+  },
+  {
+    "path": "docs/医学AdaptiveRetrievalAgent成熟版总纲v2.md",
+    "sha256": "fe6f5f1419878263975f5227569b26b8f48832d0bd0ce5b0f290ef2b2695d806"
+  },
+  {
+    "path": "docs/医学AdaptiveRetrievalAgent改造步骤01-10.md",
+    "sha256": "a829068eed7a45324043053549e6c033fae817e60648fa1b8fe29229aad16587"
+  },
+  {
+    "path": "docs/项目讲解与RAG详解.md",
+    "sha256": "a29e4a0afecb5950af527764c99f49b279ad9cd84343d02842174367cfc289c2"
+  },
+  {
+    "path": "docs/项目讲解与RAG详解.pdf",
+    "sha256": "6fcb05dfa053f2d3a426542c6d578502821dddeecb5a3f98cd53927b7da68185"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/00-总览与导航.md",
+    "sha256": "7e583f027caa8ad23824be7e019d35c83b599b5a180055e62e7668f1ea746d49"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/01-项目现状盘点.md",
+    "sha256": "dfc97818fbafdee1f7be83672a988d320e59610fcb32d52962d1624558e80960"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/02-数据准备-医学影像.md",
+    "sha256": "0f0a6e4d1e714dd32d442470c796072f49b56c0f04c5b5503ef726647048ff6e"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/03-第一步-图片转文本灌库.md",
+    "sha256": "df8e3a33dadbf4e645cdbd5b96a52dc45c0e55a7f2bac51c33a0183a587a40b0"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/04-第二步-多模态向量检索.md",
+    "sha256": "52188d4927d8f45d42c32a760209aeb6d74292cb0fcef8b6ae46be19c912ec3f"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/05-第三步-多模态生成.md",
+    "sha256": "95d44b9a02835cd25b9351a26c617d7c8d4cb203d588b84e7631182088a3193d"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/06-第四步-Agent多模态工具.md",
+    "sha256": "c5236b69d486f9e643fc6e606cb68c57c27e1c18debd22af985c859edf5a6750"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/07-前端改造-图片上传展示.md",
+    "sha256": "272036bea4c6bd92a4c6400539dcb2fc069bcb7338845f11d618d05303b8a15e"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/08-重要API函数速查.md",
+    "sha256": "31f2b22b304e3d5c8b42ddc0d5a771a2366b9cbcc3d37fd999a06e4d04eaefe1"
+  },
+  {
+    "path": "docs/多模态RAG演进指南/09-排错与环境清单.md",
+    "sha256": "2e1cc086111c1316f15b4e923fa9121dd510dc6e4745c09e4e1b0395cdc7ab81"
+  }
+]

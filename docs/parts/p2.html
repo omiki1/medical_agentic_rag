@@ -1,0 +1,265 @@
+<!-- ============ 第 1 章 ============ -->
+<section class="page chapter-block">
+  <h2 class="chapter"><span class="no">01</span>项目概览与定位</h2>
+  <p class="lead">MediAtlas 是一套<strong>医学资料检索工作台</strong>。它把疾病知识、公开来源与对话上下文连接起来，输出<strong>可追溯、可验证</strong>的资料摘录，并在界面上展示检索、校验与停止的完整过程。</p>
+
+  <h3>1.1 它到底是什么</h3>
+  <p>用一句话概括：<strong>一个「宁可拒绝回答，也不编造答案」的医学 RAG + 受限 Agent 系统</strong>。它的核心价值不在「生成一段流畅的回答」，而在「回答中的每一句话都能在原文里逐字找到出处」。</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+      <rect x="0" y="0" width="800" height="300" fill="#fbfcfe"/>
+      <rect x="40" y="40" width="230" height="220" rx="14" fill="#e9f5f1" stroke="#0b6e5c"/>
+      <text x="155" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="#085247">输入 · 医学问题</text>
+      <text x="155" y="98" text-anchor="middle" font-size="13" fill="#2b5a50">「高血压有哪些症状？」</text>
+      <text x="155" y="122" text-anchor="middle" font-size="13" fill="#2b5a50">「我老是喝水，尿多变瘦…」</text>
+      <text x="155" y="146" text-anchor="middle" font-size="13" fill="#2b5a50">「我现在胸痛喘不上气」</text>
+      <rect x="155" y="176" width="120" height="40" rx="8" fill="#0b6e5c"/>
+      <text x="215" y="201" text-anchor="middle" font-size="13" fill="#fff" font-weight="600">三种走向</text>
+
+      <rect x="310" y="40" width="210" height="220" rx="14" fill="#eef4ff" stroke="#2563eb"/>
+      <text x="415" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">中间过程 · 编排</text>
+      <text x="415" y="100" text-anchor="middle" font-size="12.5" fill="#334155">识别意图 / 实体 / 分面</text>
+      <text x="415" y="122" text-anchor="middle" font-size="12.5" fill="#334155">固定规划 + 受限模型规划</text>
+      <text x="415" y="144" text-anchor="middle" font-size="12.5" fill="#334155">多路检索 + 融合 + 重排</text>
+      <text x="415" y="166" text-anchor="middle" font-size="12.5" fill="#334155">证据门槛 + 反思(≤3轮)</text>
+      <text x="415" y="188" text-anchor="middle" font-size="12.5" fill="#334155">答案逐字摘录校验</text>
+      <text x="415" y="214" text-anchor="middle" font-size="12" fill="#6b7280">整个过程通过 SSE 实时可见</text>
+
+      <rect x="560" y="40" width="200" height="220" rx="14" fill="#f6f3fb" stroke="#6d28d9"/>
+      <text x="660" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="#4c1d95">输出 · 可验证答案</text>
+      <text x="660" y="104" text-anchor="middle" font-size="13" fill="#334155">① 有来源支持的摘录</text>
+      <text x="660" y="132" text-anchor="middle" font-size="13" fill="#334155">② 证据不足 → 拒答</text>
+      <text x="660" y="160" text-anchor="middle" font-size="13" fill="#334155">③ 急症 → 立即就医</text>
+      <text x="660" y="188" text-anchor="middle" font-size="13" fill="#334155">④ 需要澄清 / 超出范围</text>
+      <text x="660" y="218" text-anchor="middle" font-size="12.5" fill="#6b7280">每条引用标注 [E1][E2]…</text>
+
+      <line x1="270" y1="150" x2="308" y2="150" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="520" y1="150" x2="558" y2="150" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+    </svg>
+    <figcaption><b>图 1-1</b> 系统三要素：问题进来 → 编排校验 → 要么给出可溯源摘录，要么明确拒答。</figcaption>
+  </figure>
+
+  <h3>1.2 它「不是」什么（边界意识）</h3>
+  <p>这个项目最大的特点，是把「能做什么」和「不能做什么」都写在了脸上。理解这一点，就理解了整个系统的设计动机。</p>
+  <div class="callout danger"><span class="ttl">它不是医疗诊断工具</span>不提供诊断、处方、剂量建议。遇到个人用药、剂量、孕妇/儿童/特殊人群问题，会<strong>主动拒绝回答</strong>（abstained）。</div>
+  <div class="callout warn"><span class="ttl">它不是「大模型自由发挥」的聊天机器人</span>模型只能<strong>选择和排列原文片段</strong>，不能改写、不能推理补全。任何「不受原文支持」的内容都无法通过校验门。</div>
+  <div class="callout note"><span class="ttl">它不是生产级多租户服务</span>单机单进程、限流并发都在进程内，默认只绑定 localhost。这是刻意的「个人研究部署」范围。</div>
+
+  <h3>1.3 五个状态（系统的全部出口）</h3>
+  <table>
+    <tr><th>状态</th><th>含义</th><th>触发示例</th></tr>
+    <tr><td><b>answered</b></td><td>有来源支持，已通过证据+答案双重校验</td><td>「高血压有哪些症状？」</td></tr>
+    <tr><td><b>abstained</b></td><td>证据不足 / 涉及个人治疗，保守拒答</td><td>「二甲双胍吃多少毫克？」</td></tr>
+    <tr><td><b>emergency</b></td><td>识别到急症信号，先于模型执行</td><td>「我突然胸痛而且喘不上气」</td></tr>
+    <tr><td><b>clarification</b></td><td>缺少上下文，需要补充</td><td>「那应该如何预防？」（无上文实体）</td></tr>
+    <tr><td><b>out_of_scope</b></td><td>超出知识库范围</td><td>「帮我查明天的天气」</td></tr>
+  </table>
+</section>
+
+<!-- ============ 第 2 章 ============ -->
+<section class="page chapter-block">
+  <h2 class="chapter"><span class="no">02</span>技术栈全景图</h2>
+  <p class="lead">整个项目是一套<strong>前后端分离 + 多存储 + 本地模型 + 外部 LLM</strong>的完整闭环。下面按「从浏览器到磁盘」的分层视角展示。</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+      <rect x="0" y="0" width="800" height="520" fill="#fbfcfe"/>
+
+      <rect x="24" y="18" width="752" height="86" rx="12" fill="#eef4ff" stroke="#2563eb"/>
+      <text x="44" y="44" font-size="14" font-weight="700" fill="#1d4ed8">表现层 · 前端</text>
+      <rect x="44" y="56" width="150" height="36" rx="8" fill="#fff" stroke="#2563eb"/>
+      <text x="119" y="79" text-anchor="middle" font-size="12.5" fill="#1e293b">Vue 3 (Composition API)</text>
+      <rect x="206" y="56" width="130" height="36" rx="8" fill="#fff" stroke="#2563eb"/>
+      <text x="271" y="79" text-anchor="middle" font-size="12.5" fill="#1e293b">Vite 构建 / 静态托管</text>
+      <rect x="348" y="56" width="210" height="36" rx="8" fill="#fff" stroke="#2563eb"/>
+      <text x="453" y="79" text-anchor="middle" font-size="12.5" fill="#1e293b">SSE 流式解码器 (自研)</text>
+      <rect x="570" y="56" width="186" height="36" rx="8" fill="#fff" stroke="#2563eb"/>
+      <text x="663" y="79" text-anchor="middle" font-size="12.5" fill="#1e293b">证据观察台 / 四页签</text>
+
+      <rect x="24" y="122" width="752" height="86" rx="12" fill="#e9f5f1" stroke="#0b6e5c"/>
+      <text x="44" y="148" font-size="14" font-weight="700" fill="#085247">接口与控制层 · 后端</text>
+      <rect x="44" y="160" width="170" height="36" rx="8" fill="#fff" stroke="#0b6e5c"/>
+      <text x="129" y="183" text-anchor="middle" font-size="12.5" fill="#1e293b">FastAPI + Uvicorn</text>
+      <rect x="226" y="160" width="160" height="36" rx="8" fill="#fff" stroke="#0b6e5c"/>
+      <text x="306" y="183" text-anchor="middle" font-size="12.5" fill="#1e293b">Pydantic v2 结构化校验</text>
+      <rect x="398" y="160" width="170" height="36" rx="8" fill="#fff" stroke="#0b6e5c"/>
+      <text x="483" y="183" text-anchor="middle" font-size="12.5" fill="#1e293b">StreamingResponse (SSE)</text>
+      <rect x="580" y="160" width="176" height="36" rx="8" fill="#fff" stroke="#0b6e5c"/>
+      <text x="668" y="183" text-anchor="middle" font-size="12.5" fill="#1e293b">MVC 分层 (controller/service/dao)</text>
+
+      <rect x="24" y="226" width="752" height="86" rx="12" fill="#f1ebfb" stroke="#6d28d9"/>
+      <text x="44" y="252" font-size="14" font-weight="700" fill="#4c1d95">编排与检索层 · 核心</text>
+      <rect x="44" y="264" width="210" height="36" rx="8" fill="#fff" stroke="#6d28d9"/>
+      <text x="149" y="287" text-anchor="middle" font-size="12.5" fill="#1e293b">MedicalAgent 状态机 (手写)</text>
+      <rect x="266" y="264" width="170" height="36" rx="8" fill="#fff" stroke="#6d28d9"/>
+      <text x="351" y="287" text-anchor="middle" font-size="12.5" fill="#1e293b">BM25(bigram) 自研</text>
+      <rect x="448" y="264" width="190" height="36" rx="8" fill="#fff" stroke="#6d28d9"/>
+      <text x="543" y="287" text-anchor="middle" font-size="12.5" fill="#1e293b">RRF 融合 + CrossEncoder</text>
+      <rect x="650" y="264" width="106" height="36" rx="8" fill="#fff" stroke="#6d28d9"/>
+      <text x="703" y="287" text-anchor="middle" font-size="12" fill="#1e293b">HyDE</text>
+
+      <rect x="24" y="330" width="752" height="86" rx="12" fill="#fdf3e3" stroke="#b45309"/>
+      <text x="44" y="356" font-size="14" font-weight="700" fill="#92400e">模型层 · 本地 + 外部</text>
+      <rect x="44" y="368" width="190" height="36" rx="8" fill="#fff" stroke="#b45309"/>
+      <text x="139" y="391" text-anchor="middle" font-size="12.5" fill="#1e293b">SentenceTransformer 嵌入</text>
+      <rect x="246" y="368" width="160" height="36" rx="8" fill="#fff" stroke="#b45309"/>
+      <text x="326" y="391" text-anchor="middle" font-size="12.5" fill="#1e293b">CrossEncoder 重排</text>
+      <rect x="418" y="368" width="170" height="36" rx="8" fill="#fff" stroke="#b45309"/>
+      <text x="503" y="391" text-anchor="middle" font-size="12.5" fill="#1e293b">GLM / DeepSeek (httpx)</text>
+      <rect x="600" y="368" width="156" height="36" rx="8" fill="#fff" stroke="#b45309"/>
+      <text x="678" y="391" text-anchor="middle" font-size="12.5" fill="#1e293b">OpenCode Go (Agent)</text>
+
+      <rect x="24" y="434" width="752" height="70" rx="12" fill="#e8f1fb" stroke="#0ea5e9"/>
+      <text x="44" y="460" font-size="14" font-weight="700" fill="#075985">数据与存储层</text>
+      <rect x="44" y="470" width="130" height="26" rx="6" fill="#fff" stroke="#0ea5e9"/>
+      <text x="109" y="488" text-anchor="middle" font-size="11.5" fill="#1e293b">SQLite/MySQL/PG</text>
+      <rect x="186" y="470" width="96" height="26" rx="6" fill="#fff" stroke="#0ea5e9"/>
+      <text x="234" y="488" text-anchor="middle" font-size="11.5" fill="#1e293b">Redis</text>
+      <rect x="294" y="470" width="100" height="26" rx="6" fill="#fff" stroke="#0ea5e9"/>
+      <text x="344" y="488" text-anchor="middle" font-size="11.5" fill="#1e293b">Neo4j</text>
+      <rect x="406" y="470" width="110" height="26" rx="6" fill="#fff" stroke="#0ea5e9"/>
+      <text x="461" y="488" text-anchor="middle" font-size="11.5" fill="#1e293b">Chroma</text>
+      <rect x="528" y="470" width="130" height="26" rx="6" fill="#fff" stroke="#0ea5e9"/>
+      <text x="593" y="488" text-anchor="middle" font-size="11.5" fill="#1e293b">SQLite FTS5 全文</text>
+      <rect x="670" y="470" width="86" height="26" rx="6" fill="#fff" stroke="#0ea5e9"/>
+      <text x="713" y="488" text-anchor="middle" font-size="11.5" fill="#1e293b">NumPy</text>
+    </svg>
+    <figcaption><b>图 2-1</b> 技术栈五层全景。绿色=后端主体，紫色=核心编排，橙黄=模型，蓝=数据。</figcaption>
+  </figure>
+
+  <h3>2.1 关键依赖一览</h3>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/requirements.txt</div>
+    <pre><span class="cc"># Web / 数据校验</span>
+fastapi==0.139.2
+uvicorn==0.51.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+
+<span class="cc"># HTTP / 认证</span>
+httpx==0.28.1
+python-jose[cryptography]==3.5.0
+bcrypt==4.0.1
+
+<span class="cc"># 存储适配</span>
+redis==8.0.1
+PyMySQL==1.2.0
+psycopg[binary]==3.3.4
+neo4j==6.1.0
+
+<span class="cc"># 检索 / 向量</span>
+numpy==1.26.4
+sentence-transformers==5.6.1
+chromadb==1.3.7
+portalocker==3.2.0</pre>
+  </div>
+  <p class="muted">注意：项目<strong>没有使用 LangChain / LangGraph</strong>。Agent 状态机、检索、融合、记忆都是手写实现——这是理解本项目最关键的背景：作者刻意用「显式代码」替代「黑盒框架」，换取可观察、可评测、可验证。</p>
+
+  <h3>2.2 为什么不用 LangGraph</h3>
+  <div class="callout key"><span class="ttl">框架 vs 手写的取舍</span>LangGraph 提供了 streaming 和持久化，但本项目需要的是「有界状态、可观察事件、可逐条评测」的确定性。手写 Python 状态机 + 异步生成器让每一步都能产出 <code>TraceEvent</code>（执行轨迹），而模型的思维链<strong>永远不落库、不展示</strong>。详见 <code>docs/ARCHITECTURE.md</code> 第 26–32 行的说明。</div>
+</section>
+
+<!-- ============ 第 3 章 ============ -->
+<section class="page chapter-block">
+  <h2 class="chapter"><span class="no">03</span>核心思路主线（先看懂这一章）</h2>
+  <p class="lead">如果只记住一条主线，请记住这条：<strong>「先感知 → 再规划 → 检索证据 → 用代码设门槛 → 不够就受限反思 → 够了就用原文片段拼答案 → 拼出来的每一句都要逐字校验」</strong>。这一章用一张大图把全链路串起来。</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 800 1080" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+      <rect x="0" y="0" width="800" height="1080" fill="#fbfcfe"/>
+
+      <!-- 1 感知 -->
+      <rect x="60" y="30" width="680" height="92" rx="12" fill="#e9f5f1" stroke="#0b6e5c"/>
+      <circle cx="92" cy="76" r="16" fill="#0b6e5c"/><text x="92" y="81" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">1</text>
+      <text x="120" y="60" font-size="15" font-weight="700" fill="#085247">感知与安全检查</text>
+      <text x="120" y="82" font-size="12.5" fill="#2b5a50">QueryAnalyzer：实体提取 + 分面识别 + 急症/个人治疗/超范围判定</text>
+      <text x="120" y="102" font-size="12" fill="#5b7a72">急症信号「先于模型执行」——这里命中的话直接返回 emergency，不调任何模型。</text>
+
+      <!-- 2 规划 -->
+      <rect x="60" y="150" width="680" height="92" rx="12" fill="#eef4ff" stroke="#2563eb"/>
+      <circle cx="92" cy="196" r="16" fill="#2563eb"/><text x="92" y="201" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">2</text>
+      <text x="120" y="180" font-size="15" font-weight="700" fill="#1d4ed8">制定检索计划</text>
+      <text x="120" y="202" font-size="12.5" fill="#334155">固定规则规划（make_plan）+ 可选受限模型规划（refine，只在 provider=compatible 时）</text>
+      <text x="120" y="222" font-size="12" fill="#6b7280">决定走哪些路：dense / bm25 / graph / hyde / pubmed；模型只能「缩减」不能「越权开启」。</text>
+
+      <!-- 3 检索 -->
+      <rect x="60" y="270" width="680" height="112" rx="12" fill="#f1ebfb" stroke="#6d28d9"/>
+      <circle cx="92" cy="326" r="16" fill="#6d28d9"/><text x="92" y="331" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">3</text>
+      <text x="120" y="300" font-size="15" font-weight="700" fill="#4c1d95">执行受限检索（RAGService.retrieve）</text>
+      <text x="120" y="322" font-size="12.5" fill="#3b1f6b">多路召回：BM25(自研 bigram 分词) + Dense(SentenceTransformer) + 同源 Graph + 可选 HyDE</text>
+      <text x="120" y="342" font-size="12.5" fill="#3b1f6b">检索能力来自「程序装配的服务」，模型不能指定任意 SQL / 网址 / 写入动作。</text>
+      <text x="120" y="362" font-size="12" fill="#6b7280">Neo4j 只做固定参数化只读查询；图谱没有边≠禁忌，也不能证明安全。</text>
+
+      <!-- 4 融合 -->
+      <rect x="60" y="410" width="680" height="80" rx="12" fill="#fdf3e3" stroke="#b45309"/>
+      <circle cx="92" cy="450" r="16" fill="#b45309"/><text x="92" y="455" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">4</text>
+      <text x="120" y="440" font-size="15" font-weight="700" fill="#92400e">融合 + 重排</text>
+      <text x="120" y="462" font-size="12.5" fill="#6c3b06">加权 RRF 融合（每路每文档只计一次分）→ CrossEncoder 精排（无模型时退化为覆盖率启发式）</text>
+
+      <!-- 5 证据门槛 -->
+      <rect x="60" y="518" width="680" height="100" rx="12" fill="#fdecec" stroke="#dc2626"/>
+      <circle cx="92" cy="568" r="16" fill="#dc2626"/><text x="92" y="573" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">5</text>
+      <text x="120" y="548" font-size="15" font-weight="700" fill="#991b1b">证据门槛（EvidenceGrader）</text>
+      <text x="120" y="570" font-size="12.5" fill="#7f1d1d">只有 review_status=source_checked + 有发布日期 + 在时效内 + 相关性达标 + 实体匹配的文档才算数</text>
+      <text x="120" y="590" font-size="12" fill="#9a5b5b">必须覆盖「实体 × 分面」；个人治疗/特殊人群需要专门证据，普通科普页无法满足。</text>
+
+      <!-- 分支 -->
+      <text x="400" y="648" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">证据是否足够？</text>
+      <line x1="300" y1="662" x2="300" y2="700" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-g)"/>
+      <text x="238" y="690" text-anchor="end" font-size="12" fill="#16a34a" font-weight="600">足够 → 进入答案生成</text>
+      <line x1="500" y1="662" x2="500" y2="700" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow-r)"/>
+      <text x="562" y="690" font-size="12" fill="#dc2626" font-weight="600">不足 → 进入反思</text>
+
+      <!-- 6a 反思 -->
+      <rect x="320" y="700" width="440" height="100" rx="12" fill="#fdecec" stroke="#dc2626"/>
+      <circle cx="352" cy="750" r="16" fill="#dc2626"/><text x="352" y="755" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">6</text>
+      <text x="380" y="732" font-size="14.5" font-weight="700" fill="#991b1b">受限反思（最多 3 轮）</text>
+      <text x="380" y="754" font-size="12.5" fill="#7f1d1d">允许动作只有 rewrite / hyde / stop（AgentPolicy 白名单）</text>
+      <text x="380" y="774" font-size="12" fill="#9a5b5b">重复证据、无新条件、触及轮数上限都会强制 stop。</text>
+      <line x1="540" y1="800" x2="540" y2="830" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow-r)"/>
+      <text x="700" y="822" text-anchor="end" font-size="12" fill="#dc2626" font-weight="600">回到检索（rewrite/hyde）</text>
+
+      <!-- 6b 答案 -->
+      <rect x="60" y="700" width="240" height="100" rx="12" fill="#e9f7ee" stroke="#16a34a"/>
+      <circle cx="92" cy="750" r="16" fill="#16a34a"/><text x="92" y="755" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">7</text>
+      <text x="120" y="732" font-size="14.5" font-weight="700" fill="#15803d">生成候选答案</text>
+      <text x="120" y="754" font-size="12.5" fill="#14532d">模型「选择+排列」原文片段</text>
+      <text x="120" y="774" font-size="12" fill="#4a7a5b">失败则回退到规则摘录（extract）</text>
+
+      <!-- 8 校验 -->
+      <rect x="60" y="840" width="680" height="100" rx="12" fill="#fdecec" stroke="#dc2626"/>
+      <circle cx="92" cy="890" r="16" fill="#dc2626"/><text x="92" y="895" text-anchor="middle" font-size="13" fill="#fff" font-weight="700">8</text>
+      <text x="120" y="870" font-size="15" font-weight="700" fill="#991b1b">答案逐字校验（AnswerGrader）</text>
+      <text x="120" y="892" font-size="12.5" fill="#7f1d1d">text 必须 == quotes 的直接拼接；引用必须逐字出现在原文；必须覆盖全部实体×分面</text>
+      <text x="120" y="912" font-size="12" fill="#9a5b5b">任何「改写或推论」都无法通过——这是从机制上阻断幻觉的关键。</text>
+
+      <!-- 9 输出 -->
+      <rect x="60" y="968" width="680" height="72" rx="12" fill="#0b6e5c"/>
+      <circle cx="92" cy="1004" r="16" fill="#fff"/><text x="92" y="1009" text-anchor="middle" font-size="13" fill="#0b6e5c" font-weight="700">9</text>
+      <text x="120" y="992" font-size="15" font-weight="700" fill="#ffffff">输出 · 持久化 · SSE 执行轨迹</text>
+      <text x="120" y="1014" font-size="12.5" fill="#c9ece2">DAO 保存已验证结果 → SSE 把每一步 TraceEvent 推给前端 → 前端展示引用 [E1][E2]</text>
+
+      <line x1="400" y1="122" x2="400" y2="148" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="400" y1="242" x2="400" y2="268" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="400" y1="382" x2="400" y2="408" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="400" y1="490" x2="400" y2="516" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="400" y1="618" x2="400" y2="646" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+      <line x1="400" y1="940" x2="400" y2="966" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+    </svg>
+    <figcaption><b>图 3-1</b> 核心主线全景。红色方块是「代码设的门槛」，绿色是「产出」，这是本项目与普通「RAG 聊天」的本质区别。</figcaption>
+  </figure>
+
+  <div class="callout key"><span class="ttl">一句话记忆钩子</span><strong>「模型负责提候选，代码负责设门槛」</strong>。模型的每一次输出（规划、反思、答案）都要经过 Pydantic 结构校验 + 白名单/逐字校验；代码（不是模型）决定能不能继续、能不能答。</div>
+
+  <h3>3.1 两条「硬限制」主线</h3>
+  <table>
+    <tr><th>限制</th><th>数值</th><th>目的</th></tr>
+    <tr><td>检索轮数</td><td>最多 3 轮</td><td>防止无限反思循环</td></tr>
+    <tr><td>模型请求数</td><td>最多 6 次</td><td>成本 + 延迟双预算</td></tr>
+    <tr><td>单请求超时</td><td>默认 75–90 秒</td><td>SSE 不悬挂</td></tr>
+    <tr><td>单次模型请求</td><td>20 秒</td><td>LLM 慢响应熔断</td></tr>
+    <tr><td>全局并发</td><td>10 个任务</td><td>单进程容量；第 11 个明确拒绝</td></tr>
+    <tr><td>单用户进行中</td><td>1 个</td><td>避免重复计算</td></tr>
+  </table>
+</section>

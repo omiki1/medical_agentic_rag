@@ -1,0 +1,248 @@
+<!-- ============ 第 13 章 ============ -->
+<section class="page chapter-block">
+  <h2 class="chapter"><span class="no">13</span>关键代码逐段详解</h2>
+  <p class="lead">前面各章已经穿插了大量代码。这一章聚焦「完整可运行的核心入口」，把 <code>MedicalAgent.stream</code> 的主干逻辑完整读一遍——它是整个系统的「心脏」。</p>
+
+  <h3>13.1 MedicalAgent.stream 主干流程</h3>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/agent/MedicalAgent.py — stream() 主干（注释版）</div>
+    <pre><span class="cf">async def</span> <span class="ck">stream</span>(self, question, run_id, previous_question=<span class="cs">""</span>, *, fixed=False,
+                memory=None, retrieval_mode=<span class="cs">"hybrid"</span>, graph_enabled=True, conversation_id=<span class="cs">""</span>):
+    start = time.perf_counter()
+    trace, warnings = [], ...
+    budget = {<span class="cs">"calls"</span>: 0, <span class="cs">"session_id"</span>: conversation_id <span class="cf">or</span> run_id}
+    iteration = 0
+
+    <span class="cc"># ① 读取四层记忆（如果有）</span>
+    <span class="cf">if</span> memory:
+        previous_question = memory.previous_question
+        yield event(<span class="cs">"memory"</span>, <span class="cs">"读取四层记忆上下文"</span>, memory.trace())
+
+    <span class="cc"># ② 感知：识别问题与安全检查</span>
+    analysis = self.analyzer.analyze(question, previous_question)
+    yield event(<span class="cs">"analyze"</span>, <span class="cs">"识别问题与安全检查"</span>, {...})
+
+    <span class="cc"># ③ 急症先于一切</span>
+    <span class="cf">if</span> analysis.emergency:
+        result.status, result.answer = <span class="cs">"emergency"</span>, EMERGENCY_ANSWER
+        yield event(<span class="cs">"safety"</span>, <span class="cs">"急症信号：立即就医"</span>, ..., <span class="cs">"blocked"</span>)
+    <span class="cf">elif</span> analysis.needs_clarification:
+        result.status = <span class="cs">"clarification"</span>
+    <span class="cf">elif</span> analysis.out_of_scope:
+        result.status = <span class="cs">"out_of_scope"</span>
+    <span class="cf">else</span>:
+        <span class="cc"># ④ 规划 + 可选模型精化</span>
+        plan = self.planner.plan(analysis, self.retriever.dense <span class="cf">is not None</span>)
+        <span class="cf">if not</span> fixed:
+            plan, query, plan_source = <span class="cf">await</span> self.planner.refine(analysis, plan, self.agent_gateway, budget)
+        ...
+        <span class="cc"># ⑤ 检索循环（最多 3 轮）</span>
+        <span class="cf">for</span> iteration <span class="cf">in</span> range(1, (1 <span class="cf">if</span> fixed <span class="cf">else</span> self.settings.max_iterations) + 1):
+            evidence, grade, observation = <span class="cf">await</span> self.rag.retrieve(query, analysis, plan, ...)
+            ...
+            <span class="cc"># ⑥ 证据足够 → 生成 + 校验答案</span>
+            <span class="cf">if</span> grade.sufficient:
+                ...
+                <span class="cf">if</span> self.settings.provider == <span class="cs">"compatible"</span>:
+                    <span class="cf">for</span> attempt <span class="cf">in</span> range(2):
+                        raw = <span class="cf">await</span> self.gateway.json(<span class="cs">"为问题选择相关原文片段..."</span>, ...)
+                        candidate = Draft.model_validate(raw)
+                        answer_grade = self.answer_grader.grade(candidate, eligible, analysis)
+                        <span class="cf">if</span> answer_grade.passed:
+                            draft, mode = candidate, <span class="cs">"model_selected_excerpts"</span>
+                            break
+                        feedback = answer_grade.feedback   <span class="cc"># 失败反馈给模型重试</span>
+                <span class="cf">if</span> draft <span class="cf">is None</span>:
+                    draft = self.extract(eligible, analysis, memory)  <span class="cc"># 规则摘录兜底</span>
+                answer_grade = self.answer_grader.grade(draft, eligible, analysis)
+                <span class="cf">if</span> answer_grade.passed:
+                    result.status = <span class="cs">"answered"</span>
+                    result.answer = self.render(draft, eligible, analysis)
+                <span class="cf">else</span>:
+                    result.answer = <span class="cs">"答案未通过引用校验，暂不展示..."</span>
+                break
+            <span class="cc"># ⑦ 证据不足 → 受限反思</span>
+            fingerprint = tuple(sorted(e.document.id <span class="cf">for</span> e <span class="cf">in</span> evidence))
+            progressed = fingerprint <span class="cf">not in</span> fingerprints
+            ...
+            decision, origin = <span class="cf">await</span> self.reflection.reflect(analysis, grade, iteration, progressed, ...)
+            <span class="cf">if</span> decision.action == <span class="cs">"stop"</span>: break
+            <span class="cf">if</span> decision.action == <span class="cs">"hyde"</span>:
+                hypothesis, hyde_used = decision.query, True
+            <span class="cf">else</span>:
+                query, hypothesis = decision.query, <span class="cs">""</span>
+    ...
+    <span class="cc"># ⑧ 收尾：产出 result 事件</span>
+    result.trace = trace
+    result.model_calls = budget[<span class="cs">"calls"</span>]
+    result.duration_ms = round((time.perf_counter() - start) * 1000)
+    yield {<span class="cs">"type"</span>: <span class="cs">"result"</span>, <span class="cs">"data"</span>: result.model_dump(mode=<span class="cs">"json"</span>)}</pre>
+  </div>
+
+  <div class="callout key"><span class="ttl">读懂这段就懂了整个项目</span>注意三个关键点：
+    <ol style="margin:6px 0 0 20px; padding-left:0">
+      <li><b>yield event(...)</b> 无处不在——每一步都向外广播可观察事件，这是「可观察性」的来源。</li>
+      <li><b>fingerprint + progressed</b>——如果这轮检索出的文档集合和上一轮一模一样（无进展），直接 stop，防止空转。</li>
+      <li><b>draft is None 兜底</b>——模型选了两次都过不了校验，就回退到规则摘录（<code>self.extract</code>），规则摘录天然是「原文拼接」，必过校验。</li>
+    </ol>
+  </div>
+
+  <h3>13.2 兜底摘录 extract()：为什么它能保证安全</h3>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>MedicalAgent.py — extract()（节选）</div>
+    <pre><span class="cf">def</span> <span class="ck">extract</span>(self, evidence, analysis, memory=None):
+    selected = []
+    covered = set()
+    <span class="cf">for</span> ev <span class="cf">in</span> evidence:
+        d = ev.document
+        <span class="cf">if</span> analysis.facets != [<span class="cs">"overview"</span>] <span class="cf">and</span> d.facet <span class="cf">not in</span> analysis.facets:
+            <span class="cf">continue</span>
+        key = (d.entity, d.facet)
+        <span class="cf">if</span> key <span class="cf">in</span> covered:
+            <span class="cf">continue</span>          <span class="cc"># 每个实体×分面只取一条</span>
+        covered.add(key)
+        selected.append(Claim(text=d.text, evidence_ids=[d.id], quotes=[d.text]))
+    ...
+    <span class="cf">return</span> Draft(claims=selected[:8])</pre>
+  </div>
+  <p class="muted">规则摘录直接把 <code>text</code> 设成 <code>d.text</code>、<code>quotes</code> 设成 <code>[d.text]</code>，所以 <code>text == quotes 拼接</code> 恒成立，天然通过校验。这就是「模型失败时系统依然能给出安全答案」的兜底机制。</p>
+
+  <h3>13.3 渲染与免责声明</h3>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>MedicalAgent.py — render() + 常量</div>
+    <pre>DISCLAIMER = <span class="cs">"以上为资料检索与医学科普，不构成个体诊断或处方；请结合医务人员评估。"</span>
+EMERGENCY_ANSWER = <span class="cs">"你描述的情况可能需要紧急医疗处理。请立即联系当地急救服务..."</span>
+
+<span class="cf">def</span> <span class="ck">render</span>(self, draft, evidence, analysis):
+    ids = {e.document.id: e.citation_id <span class="cf">for</span> e <span class="cf">in</span> evidence}
+    body = <span class="cs">"\n\n"</span>.join(
+        claim.text + <span class="cs">" "</span> + <span class="cs">" "</span>.join(f<span class="cs">"[{ids[i]}]"</span> <span class="cf">for</span> i <span class="cf">in</span> claim.evidence_ids)
+        <span class="cf">for</span> claim <span class="cf">in</span> draft.claims
+    )
+    <span class="cf">return</span> body + <span class="cs">"\n\n"</span> + DISCLAIMER</pre>
+  </div>
+  <p class="muted">每条 claim 后面直接拼引注 <code>[E1]</code>，最后加固定免责声明。答案的「可追溯」在这里落实成文本层面的引注。</p>
+</section>
+
+<!-- ============ 第 14 章 ============ -->
+<section class="page chapter-block">
+  <h2 class="chapter"><span class="no">14</span>已知边界与取舍</h2>
+  <p class="lead">一份成熟的工程文档，必然包含「承认自己的边界」。这一章梳理项目里明确写出的取舍，帮你理解「哪些是刻意的、哪些是待改进的」。</p>
+
+  <h3>14.1 刻意的边界（设计使然）</h3>
+  <table>
+    <tr><th>边界</th><th>为什么刻意</th><th>影响</th></tr>
+    <tr><td>只有 29 条 source_checked</td><td>不把未复核语料当证据</td><td>可回答面窄，但可信</td></tr>
+    <tr><td>单机单进程</td><td>GPU 模型不重复加载</td><td>无水平扩展</td></tr>
+    <tr><td>急症用规则不用模型</td><td>快、可控、不依赖网络</td><td>可能遗漏未知表达</td></tr>
+    <tr><td>答案只能逐字摘录</td><td>从机制上阻断幻觉</td><td>回答不「流畅」，偏保守</td></tr>
+    <tr><td>模型不能生成 Cypher</td><td>防注入</td><td>图谱查询灵活性受限</td></tr>
+    <tr><td>思维链不展示不落库</td><td>隐私 + 可观察性</td><td>无法审计模型内部推理</td></tr>
+  </table>
+
+  <h3>14.2 已知的技术欠账</h3>
+  <div class="callout warn"><span class="ttl">文档里明确承认的（docs/ARCHITECTURE.md）</span>
+    <ul style="margin:6px 0 0 18px; padding:0">
+      <li><b>GPU 同步推理</b>：HTTP 取消无法强制终止已进入的 CUDA 运算，只能取消结果输出，那批计算可能跑完。</li>
+      <li><b>限流在进程内</b>：多实例需迁移到共享限流、连接池、外部任务队列。</li>
+      <li><b>访客会话</b>：过期后无法访问，但数据库行不自动删除——正式部署前需增加保留周期、备份与删除审计。</li>
+      <li><b>急症规则</b>：中英文规则 + 否定处理，不是临床分诊模型，未知表达可能遗漏。</li>
+      <li><b>评测</b>：开发回归集，非无偏外部评测；没有医生标注。</li>
+    </ul>
+  </div>
+
+  <h3>14.3 医学层面的硬边界</h3>
+  <div class="callout danger"><span class="ttl">三条不可逾越的红线</span>
+    <ol style="margin:6px 0 0 18px; padding:0">
+      <li><b>图谱没有边 ≠ 药物禁忌</b>：图谱里查不到「A 病和 B 药」的关系，不代表安全。</li>
+      <li><b>引用可验证 ≠ 医学正确</b>：代码能证明「这句话来自原文」，但无法证明「原文本身医学正确」。</li>
+      <li><b>个人用药/剂量/特殊人群</b>：一律需要专门证据 + 专业评估，普通科普页永远无法满足，系统强制拒答。</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ 第 15 章 ============ -->
+<section class="page chapter-block">
+  <h2 class="chapter"><span class="no">15</span>面试问答与术语表</h2>
+  <p class="lead">最后一章是「快速回顾」。熟读这一章，你可以在面试里用 3 分钟讲清楚这个项目。</p>
+
+  <h3>15.1 高频面试问答</h3>
+  <div class="qa"><div class="q">Q1：一句话介绍这个项目？</div>
+    <div class="a">一个医学资料检索 RAG + 受限 Agent 系统，核心特点是「答案逐字摘录校验」——模型只能选择和排列原文片段，任何改写或推论都会被代码拒绝，从而从机制上阻断幻觉。</div></div>
+  <div class="qa"><div class="q">Q2：RAG 部分你具体做了什么？</div>
+    <div class="a">自研 BM25（中文 bigram 分词）+ SentenceTransformer 向量 + 同源知识图谱三路召回，用加权 RRF 融合（每路每文档只计一次分），再用 CrossEncoder 精排；无模型时退化为覆盖率启发式打分。</div></div>
+  <div class="qa"><div class="q">Q3：Agent 的「受限」体现在哪？</div>
+    <div class="a">模型输出永远只是候选数据。动作白名单只有 rewrite/hyde/stop（Pydantic Literal 约束 + extra=forbid），能力由代码授予；Neo4j 只有固定参数化只读查询；检索工具由程序装配，模型不能指定任意 SQL/网址/写入。</div></div>
+  <div class="qa"><div class="q">Q4：四层记忆怎么设计的？</div>
+    <div class="a">L1 工作记忆（请求对象）、L2 短期（Redis，带 revision 版本校验，挂了回退）、L3 情节（PG 持久化问答）、L4 长期语义（仅用户明确确认的偏好，绝不推断诊断）。所有层都按 owner 隔离。</div></div>
+  <div class="qa"><div class="q">Q5：你的评测说明了什么？</div>
+    <div class="a">32 条开发回归集，验证路由、引用和检索的工程正确性（路由/安全通过率 100%，Rerank 后 nDCG@5=0.98）。但它不是无偏外部评测，不代表临床正确率——这是刻意的诚实。</div></div>
+  <div class="qa"><div class="q">Q6：这个项目最大的技术难点/亮点？</div>
+    <div class="a">可验证性设计：<code>text == "".join(quotes)</code> 这一行让答案校验变成纯字符串判定，不依赖模型自评，把「防幻觉」从 prompt 工程变成机制保证。</div></div>
+  <div class="qa"><div class="q">Q7：如果让你继续迭代，你会做什么？</div>
+    <div class="a">① 建独立留出测试集（哪怕通过率降下来，更有说服力）；② 扩充 source_checked 语料拓宽可回答面；③ 多实例部署的共享限流/任务队列；④ 引文高亮定位等前端演示增强。</div></div>
+
+  <h3>15.2 术语表</h3>
+  <div class="term"><b>RAG</b><span class="en">Retrieval-Augmented Generation</span>检索增强生成：先从知识库检索相关资料，再让模型基于资料作答。</div>
+  <div class="term"><b>RRF</b><span class="en">Reciprocal Rank Fusion</span>倒数排名融合：把多个检索器的排名按 1/(k+rank) 加权合并。</div>
+  <div class="term"><b>HyDE</b><span class="en">Hypothetical Document Embeddings</span>假设文档嵌入：让模型先写一个「假设答案」，用它去检索，缓解「问题短、语义稀疏」。</div>
+  <div class="term"><b>CrossEncoder</b><span class="en">交叉编码器</span>把 query 和 doc 拼在一起打分，比双塔向量更准但更慢，用于精排。</div>
+  <div class="term"><b>SSE</b><span class="en">Server-Sent Events</span>服务器向浏览器单向推送事件流，本项目用它实时展示执行轨迹。</div>
+  <div class="term"><b>bigram</b><span class="en">二元组</span>把中文按相邻两个字切分（如「高血压」→「高血」「血压」），无词典依赖的分词方式。</div>
+  <div class="term"><b>owner</b><span class="en">数据归属标识</span>每条数据记录所属的会话/账户 id，所有查询强制带它实现跨用户隔离。</div>
+  <div class="term"><b>source_checked</b><span class="en">来源已核验</span>唯一能作为答案证据的文档状态；其余 unreviewed 文档只能浏览检索。</div>
+  <div class="term"><b>abstained</b><span class="en">保守拒答</span>证据不足或涉及个人治疗时的系统状态，体现「宁可拒答不编造」。</div>
+  <div class="term"><b>指纹</b><span class="en">fingerprint / signature</span>模型文件或数据内容的哈希，用于绑定索引版本、防止维度相同但模型不同的索引混用。</div>
+
+  <h3>15.3 完整目录树（backend 核心）</h3>
+  <div class="tree">backend/
+├── main.py                      # uvicorn 启动入口
+├── Application.py               # FastAPI 装配 + 中间件
+├── common/
+│   ├── ApplicationContext.py    # 依赖装配根（核心）
+│   ├── Settings.py              # 环境配置（pydantic-settings）
+│   ├── Database.py              # 三后端适配（SQLite/MySQL/PG）
+│   ├── Schema.py                # 幂等建表
+│   ├── RequestBoundary.py       # CSRF/Origin/体积/CSP
+│   ├── JWTDecode.py             # 依赖注入 owner
+│   └── HashPwdUtil.py           # PBKDF2 + bcrypt
+├── auth/  user/  chat/  memory/ # 业务域（controller/service/dao/entity）
+├── ai/
+│   ├── LLMService.py            # 受控模型调用（核心）
+│   ├── EmbeddingService.py      # 本地向量
+│   ├── Neo4jService.py          # 只读 Cypher 模板
+│   └── PubMedService.py         # 可选文献（默认关闭）
+├── agent/
+│   ├── MedicalAgent.py          # 状态机主流程（核心）
+│   ├── QueryAnalyzer.py         # 感知 + 急症检测
+│   ├── RetrievalPlanner.py      # 规划
+│   ├── ReflectionService.py     # 受限反思
+│   ├── AgentPolicy.py           # 动作白名单
+│   ├── EvidenceGrader.py        # 证据门槛
+│   └── AnswerGrader.py          # 逐字校验（防幻觉核心）
+├── rag/
+│   ├── service/RAGService.py    # 检索主入口
+│   ├── BM25Retriever.py         # 自研 bigram BM25
+│   ├── VectorRetriever.py       # 向量检索
+│   ├── fusion/EvidenceFusion.py # RRF 融合
+│   ├── RerankerUtil.py          # CrossEncoder 精排
+│   └── corpus/MedicalCorpus.py  # 语料加载 + 别名 + 图谱
+├── create_data/                 # 离线构建 + 灌库
+├── tests/                       # 单元 + 端到端测试
+└── evaluation/                  # 消融评测</div>
+</section>
+
+<!-- ============ 尾页 ============ -->
+<section class="cover" style="min-height:60vh; justify-content:center;">
+  <div class="eyebrow">End of Document</div>
+  <h2 style="font-size:30px; margin:0 0 18px;">熟悉这套系统，只需记住三句话</h2>
+  <p class="sub" style="font-size:16px; line-height:2;">
+    ① <strong>模型负责提候选，代码负责设门槛。</strong><br>
+    ② <strong>答案的每一句，都必须能在原文里逐字找到。</strong><br>
+    ③ <strong>证据不足时，宁可拒答，也不编造。</strong>
+  </p>
+  <p class="disclaimer" style="margin-top:40px;">MediAtlas · 医学证据工作台 · 研究与学习版 · 尚未经过临床验证</p>
+</section>
+
+</body>
+</html>

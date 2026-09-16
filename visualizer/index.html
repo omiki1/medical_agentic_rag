@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MediAtlas · 召回可视化</title>
+<style>
+:root { --bg:#0f1419; --panel:#161d24; --panel2:#1b232c; --line:#26313c; --text:#e6edf3; --muted:#8b98a5; --accent:#4ea1ff; --good:#3fb950; --bad:#f85149; --warn:#d29922; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+header { padding:18px 24px; border-bottom:1px solid var(--line); background:var(--panel); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+header h1 { font-size:18px; margin:0; }
+header .sub { color:var(--muted); font-size:12px; }
+.controls { padding:16px 24px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.controls label { color:var(--muted); font-size:12px; display:flex; align-items:center; gap:6px; }
+select, input[type=text] { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:13px; }
+.metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; padding:0 24px 8px; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
+.card .k { color:var(--muted); font-size:12px; }
+.card .v { font-size:22px; font-weight:600; margin-top:4px; }
+.ablation { padding:8px 24px; }
+table { width:100%; border-collapse:collapse; background:var(--panel); border-radius:10px; overflow:hidden; }
+th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--line); }
+th { background:var(--panel2); color:var(--muted); font-size:12px; font-weight:500; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+.cases { padding:16px 24px 8px; }
+.case { background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:16px; overflow:hidden; }
+.case-head { padding:12px 16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; cursor:pointer; background:var(--panel2); }
+.case-head .q { font-weight:600; }
+.case-head .tag { color:var(--muted); font-size:12px; }
+.case-body { padding:14px 16px; }
+.config-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+.config { border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+.config h4 { margin:0 0 8px; font-size:13px; color:var(--accent); }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { border-radius:999px; padding:3px 10px; font-size:12px; border:1px solid var(--line); background:var(--panel2); }
+.chip.gold { border-color:var(--good); color:var(--good); }
+.chip.hit { border-color:var(--good); background:rgba(63,185,80,.12); color:var(--good); }
+.chip.miss { border-color:var(--bad); background:rgba(248,81,73,.12); color:var(--bad); }
+.chip.hallu { border-color:var(--warn); background:rgba(210,153,34,.12); color:var(--warn); }
+.metrics-inline { margin-top:10px; display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); }
+.metrics-inline b { color:var(--text); font-variant-numeric:tabular-nums; }
+.legend { padding:0 24px; display:flex; gap:16px; flex-wrap:wrap; color:var(--muted); font-size:12px; }
+.empty { padding:40px; text-align:center; color:var(--muted); }
+footer { padding:20px 24px; color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MediAtlas · 召回可视化</h1>
+  <span class="sub">只看 reports/retrieval-details.json 与 evaluation.json，不修改任何数据</span>
+</header>
+
+<div class="controls">
+  <label>配置
+    <select id="configFilter"><option value="">全部</option></select>
+  </label>
+  <label>结果
+    <select id="resultFilter">
+      <option value="">全部</option>
+      <option value="hit">有命中</option>
+      <option value="miss">无命中（miss）</option>
+      <option value="hallu">含未在 gold 中的文档</option>
+    </select>
+  </label>
+  <label>搜索
+    <input type="text" id="qFilter" placeholder="按问题或文档标题过滤">
+  </label>
+</div>
+
+<div class="metrics" id="metrics"></div>
+
+<div class="ablation">
+  <h3 style="margin:8px 0;font-size:14px;color:var(--muted)">消融汇总（evaluation.json · ablations）</h3>
+  <table>
+    <thead><tr><th>配置</th><th class="num">Recall@5</th><th class="num">MRR</th><th class="num">nDCG@5</th><th class="num">平均耗时(ms)</th><th>说明</th></tr></thead>
+    <tbody id="ablationBody"></tbody>
+  </table>
+</div>
+
+<div class="cases">
+  <h3 style="margin:8px 0;font-size:14px;color:var(--muted)">逐题召回明细（gold 命中为绿，未命中为红，未在 gold 为黄）</h3>
+  <div class="legend">
+    <span><span class="chip gold">gold 标准答案</span></span>
+    <span><span class="chip hit">命中</span></span>
+    <span><span class="chip miss">未命中</span></span>
+    <span><span class="chip hallu">未在 gold（候选噪声）</span></span>
+  </div>
+  <div id="cases"></div>
+</div>
+
+<footer>数据来源：reports/retrieval-details.json · reports/evaluation.json · data/knowledge.sqlite（只读）</footer>
+
+<script>
+let DATA = null;
+
+async function load() {
+  const res = await fetch('/api/retrieval');
+  DATA = await res.json();
+  render();
+}
+
+function docLabel(id) {
+  const d = DATA.doc_map[id];
+  if (!d) return id;
+  return `${d.entity ? d.entity + ' · ' : ''}${d.title}`;
+}
+
+function docChip(id, goldSet) {
+  const isGold = goldSet.has(id);
+  const cls = isGold ? 'gold' : 'hallu';
+  return `<span class="chip ${cls}" title="${id}">${escapeHtml(docLabel(id))}</span>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function render() {
+  const details = DATA.details || [];
+  const evaluation = DATA.evaluation || {};
+
+  // group by question
+  const byQuestion = new Map();
+  for (const item of details) {
+    if (!byQuestion.has(item.question)) byQuestion.set(item.question, []);
+    byQuestion.get(item.question).push(item);
+  }
+
+  // config filter options
+  const configs = [...new Set(details.map(d => d.configuration))];
+  const sel = document.getElementById('configFilter');
+  sel.innerHTML = '<option value="">全部</option>' + configs.map(c => `<option>${c}</option>`).join('');
+
+  // metrics cards
+  const pipeline = (evaluation.pipelines || []);
+  const agg = pipeline.length ? pipeline[pipeline.length - 1] : null;
+  const cards = [];
+  if (agg) {
+    cards.push(['路由通过率', (agg.routing_accuracy * 100).toFixed(1) + '%']);
+    cards.push(['平均轮数', agg.mean_rounds.toFixed(2)]);
+    cards.push(['平均耗时', agg.mean_latency_ms.toFixed(0) + ' ms']);
+    cards.push(['模型调用', agg.model_calls]);
+  }
+  cards.push(['检索题数', evaluation.retrieval_case_count ?? details.length]);
+  cards.push(['来源数', evaluation.source_count ?? '—']);
+  cards.push(['召回配置数', configs.length]);
+  document.getElementById('metrics').innerHTML = cards.map(c =>
+    `<div class="card"><div class="k">${c[0]}</div><div class="v">${c[1]}</div></div>`).join('');
+
+  // ablation table
+  document.getElementById('ablationBody').innerHTML = (evaluation.ablations || []).map(a =>
+    `<tr><td>${escapeHtml(a.name)}</td>
+      <td class="num">${(a.recall_at_5 * 100).toFixed(1)}%</td>
+      <td class="num">${a.mrr ? a.mrr.toFixed(3) : '—'}</td>
+      <td class="num">${a.ndcg_at_5 ? a.ndcg_at_5.toFixed(3) : '—'}</td>
+      <td class="num">${a.latency_ms ? a.latency_ms.toFixed(0) : '—'}</td>
+      <td>${escapeHtml(a.note || '')}</td></tr>`).join('');
+
+  renderCases();
+}
+
+function renderCases() {
+  const details = DATA.details || [];
+  const cfgFilter = document.getElementById('configFilter').value;
+  const resultFilter = document.getElementById('resultFilter').value;
+  const qFilter = document.getElementById('qFilter').value.trim().toLowerCase();
+
+  const byQuestion = new Map();
+  for (const item of details) {
+    if (cfgFilter && item.configuration !== cfgFilter) continue;
+    if (!byQuestion.has(item.question)) byQuestion.set(item.question, []);
+    byQuestion.get(item.question).push(item);
+  }
+
+  const html = [];
+  for (const [question, items] of byQuestion) {
+    const gold = new Set(items[0].gold || []);
+    let hitCount = 0, hasMiss = false, hasHallu = false;
+    for (const it of items) {
+      for (const id of it.retrieved || []) {
+        if (gold.has(id)) hitCount++;
+        else hasHallu = true;
+      }
+      if (it.recall_at_5 < 1) hasMiss = true;
+    }
+    if (qFilter) {
+      const docText = [...gold].map(docLabel).join(' ').toLowerCase();
+      if (!question.toLowerCase().includes(qFilter) && !docText.includes(qFilter)) continue;
+    }
+    if (resultFilter === 'hit' && hitCount === 0) continue;
+    if (resultFilter === 'miss' && !hasMiss) continue;
+    if (resultFilter === 'hallu' && !hasHallu) continue;
+
+    const configCards = items.map(it => {
+      const g = new Set(it.gold || []);
+      const chips = (it.retrieved || []).map(id => {
+        const isGold = g.has(id);
+        const cls = isGold ? 'hit' : 'hallu';
+        return `<span class="chip ${cls}" title="${id}">${escapeHtml(docLabel(id))}</span>`;
+      }).join('');
+      return `<div class="config">
+        <h4>${escapeHtml(it.configuration)}</h4>
+        <div class="chips">${chips}</div>
+        <div class="metrics-inline">
+          <span>Recall@5 <b>${(it.recall_at_5 * 100).toFixed(0)}%</b></span>
+          <span>MRR <b>${it.mrr.toFixed(3)}</b></span>
+          <span>nDCG@5 <b>${it.ndcg_at_5.toFixed(3)}</b></span>
+          <span>耗时 <b>${it.latency_ms.toFixed(0)}ms</b></span>
+        </div>
+      </div>`;
+    }).join('');
+
+    const goldChips = [...gold].map(id => `<span class="chip gold">${escapeHtml(docLabel(id))}</span>`).join('');
+    html.push(`<div class="case">
+      <div class="case-head"><span class="q">${escapeHtml(question)}</span><span class="tag">gold ${gold.size} · 配置 ${items.length}</span></div>
+      <div class="case-body">
+        <div class="chips" style="margin-bottom:10px">${goldChips}</div>
+        <div class="config-grid">${configCards}</div>
+      </div>
+    </div>`);
+  }
+
+  document.getElementById('cases').innerHTML = html.length
+    ? html.join('')
+    : '<div class="empty">没有匹配的召回记录。</div>';
+}
+
+document.getElementById('configFilter').addEventListener('change', renderCases);
+document.getElementById('resultFilter').addEventListener('change', renderCases);
+document.getElementById('qFilter').addEventListener('input', renderCases);
+
+load();
+</script>
+</body>
+</html>

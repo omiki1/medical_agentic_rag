@@ -1,0 +1,345 @@
+<!-- ============ 第 6 章 ============ -->
+<section class="page chapter-block">
+  <h2 class="chapter"><span class="no">06</span>核心链路逐段详解</h2>
+  <p class="lead">这是全手册最重的一章。我们把主线拆成 8 个环节，每个环节讲「它在做什么 → 关键代码 → 代码为什么这么写」。读完这一章，你就真正「熟悉了这个项目」。</p>
+
+  <h3>6.1 感知：QueryAnalyzer</h3>
+  <p><code>backend/agent/QueryAnalyzer.py</code> 是整个流程的入口。它在<strong>不调用任何模型</strong>的前提下，用规则完成四件事：实体提取、分面识别、急症检测、范围判断。</p>
+
+  <h4>① 分面（facet）词表</h4>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>QueryAnalyzer.py — 分面识别</div>
+    <pre>FACET_WORDS = {
+    <span class="cs">"symptom"</span>: [<span class="cs">"症状"</span>, <span class="cs">"表现"</span>, <span class="cs">"征兆"</span>, <span class="cs">"口渴"</span>, <span class="cs">"多尿"</span>, <span class="cs">"咳嗽"</span>, <span class="cs">"体重下降"</span>],
+    <span class="cs">"prevention"</span>: [<span class="cs">"预防"</span>, <span class="cs">"避免"</span>, <span class="cs">"生活方式"</span>, <span class="cs">"戒烟"</span>],
+    <span class="cs">"medication"</span>: [<span class="cs">"药"</span>, <span class="cs">"二甲双胍"</span>, <span class="cs">"胰岛素"</span>],
+    <span class="cs">"test"</span>: [<span class="cs">"检查"</span>, <span class="cs">"检测"</span>, <span class="cs">"筛查"</span>, <span class="cs">"确诊"</span>],
+    <span class="cs">"treatment"</span>: [<span class="cs">"治疗"</span>, <span class="cs">"治愈"</span>],
+    <span class="cs">"cause"</span>: [<span class="cs">"病因"</span>, <span class="cs">"原因"</span>, <span class="cs">"传染"</span>, <span class="cs">"感染"</span>],
+    <span class="cs">"department"</span>: [<span class="cs">"科室"</span>, <span class="cs">"挂什么科"</span>],
+    <span class="cs">"diet"</span>: [<span class="cs">"饮食"</span>, <span class="cs">"吃什么好"</span>],
+    <span class="cs">"complication"</span>: [<span class="cs">"并发症"</span>, <span class="cs">"后果"</span>],
+}</pre>
+  </div>
+  <p class="muted">分面是后续「证据门槛」的重要维度：回答必须覆盖问题要求的每一个分面。比如「高血压如何预防」要求 <code>prevention</code> 分面，光有症状资料是不够的。</p>
+
+  <h4>② 实体提取：最长别名优先 + 区间去重</h4>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>QueryAnalyzer.py — extract()</div>
+    <pre><span class="cf">def</span> <span class="ck">extract</span>(self, query):
+    lowered = query.lower()
+    occupied = set()
+    matches = []
+    <span class="cf">for</span> alias, entity <span class="cf">in</span> self.aliases:   <span class="cc"># 已按长度降序排序</span>
+        pattern = (r"(?&lt;![a-z])" + re.escape(alias) + r"(?![a-z])") \
+                  <span class="cf">if</span> alias.isascii() <span class="cf">else</span> re.escape(alias)
+        <span class="cf">for</span> match <span class="cf">in</span> re.finditer(pattern, lowered):
+            span = set(range(match.start(), match.end()))
+            <span class="cf">if</span> span &amp; occupied:    <span class="cc"># 已匹配区域不重复匹配</span>
+                <span class="cf">continue</span>
+            occupied.update(span)
+            <span class="cf">if</span> entity <span class="cf">not in</span> matches:
+                matches.append(entity)
+    <span class="cf">return</span> matches[:6]</pre>
+  </div>
+  <div class="annotate"><b>要点解读</b>
+    <ul>
+      <li><b>别名来自语料库</b>：<code>MedicalCorpus.aliases</code> 在加载时构建，把「消渴症」「血糖病」都映射到「糖尿病」。所以「我老是喝水尿多变瘦」能通过 EXPANSIONS 词表转成「口渴/多尿/体重下降」，再命中症状分面。</li>
+      <li><b>最长别名优先</b>：先排长词再排短词，避免「高血压」被「血压」截断。</li>
+      <li><b>occupied 区间</b>：防止同一段文字被两个别名重复计数。</li>
+    </ul>
+  </div>
+
+  <h4>③ 急症检测：否定范围处理</h4>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>QueryAnalyzer.py — emergency_terms()（节选）</div>
+    <pre><span class="cf">def</span> <span class="ck">emergency_terms</span>(question: str):
+    ...
+    academic = bool(re.search(r<span class="cs">"科普|定义|教材|什么是|急救知识|有哪些原因|的鉴别"</span>, lowered))
+    current = bool(re.search(r<span class="cs">"我|现在|此刻|正在|突然|家人|父亲|孩子|my |i am"</span>, lowered))
+    <span class="cf">if</span> academic <span class="cf">and not</span> current:
+        <span class="cf">return</span> []     <span class="cc"># 「科普：什么是呼吸困难」不触发急症</span>
+    <span class="cf">for</span> term <span class="cf">in</span> EMERGENCY:
+        <span class="cf">for</span> match <span class="cf">in</span> re.finditer(re.escape(term), lowered):
+            prefix = re.split(r<span class="cs">"[，。；！？]|但是|不过|但"</span>, lowered[: match.start()])[-1]
+            <span class="cf">if</span> re.search(r<span class="cs">"(?:没有|并无|否认|不伴|未出现|无).{0,5}$"</span>, prefix):
+                <span class="cf">continue</span>  <span class="cc"># 「我没有胸痛」不触发</span>
+            result.append(term)
+    <span class="cf">return</span> sorted(set(result))</pre>
+  </div>
+  <div class="callout key"><span class="ttl">为什么「急症先于模型」？</span>急症信号命中的话，<code>MedicalAgent.stream</code> 直接返回 <code>emergency</code> 状态，<code>iterations=0, model_calls=0</code>——<strong>一次模型都不调</strong>。因为急症不能等模型慢慢「想」，规则判断更快更可控。测试里专门验证了「我没有胸痛，也无呼吸困难」这类否定表达不会被误判。</div>
+
+  <h3>6.2 规划：固定规则 + 受限模型</h3>
+  <p><code>backend/agent/RetrievalPlanner.py</code> 和 <code>QueryAnalyzer.make_plan</code> 决定「走哪几条检索路」。核心原则是<strong>固定规划是主流程，模型只能缩减不能越权开启</strong>。</p>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>QueryAnalyzer.py — make_plan()</div>
+    <pre><span class="cf">def</span> <span class="ck">make_plan</span>(analysis, settings, dense_available):
+    graph = bool(analysis.entities) <span class="cf">and</span> any(f <span class="cf">in</span> FACET_RELATIONS <span class="cf">for</span> f <span class="cf">in</span> analysis.facets)
+    hyde = <span class="cf">not</span> analysis.entities <span class="cf">and</span> dense_available <span class="cf">and</span> settings.provider == <span class="cs">"compatible"</span>
+    routes = ([<span class="cs">"dense"</span>, <span class="cs">"bm25"</span>] <span class="cf">if</span> dense_available <span class="cf">else</span> [<span class="cs">"bm25"</span>]) + ([<span class="cs">"graph"</span>] <span class="cf">if</span> graph <span class="cf">else</span> [])
+    <span class="cf">if</span> hyde:
+        routes.append(<span class="cs">"hyde"</span>)
+    pubmed = analysis.wants_latest <span class="cf">and</span> settings.pubmed_enabled
+    ...
+    <span class="cf">return</span> Plan(routes=routes, use_graph=graph, use_hyde=hyde, use_pubmed=pubmed, reason=reason)</pre>
+  </div>
+  <p class="muted">解读：只有命中实体 + 分面有对应关系时才走 graph；只有没有实体（症状描述类）时才考虑 HyDE 假设文档；只有用户问「最新」且开启 PubMed 才走文献。每一条路都有明确的触发条件，不是「全都跑一遍」。</p>
+
+  <div class="callout note"><span class="ttl">受限模型规划 refine() 何时介入</span>只在 <code>provider == "compatible"</code>（真实 LLM 模式）且问题足够复杂时。并且：<code>if selected.use_graph and not plan.use_graph: raise ValueError("Graph route was not authorized")</code>——模型说「开图谱」但规则没授权，直接拒绝。</div>
+
+  <h3>6.3 检索：多路召回 RAGService</h3>
+  <p><code>backend/rag/service/RAGService.py</code> 的 <code>retrieve</code> 是检索主入口，固定顺序：召回 → 图谱验证 → HyDE → 融合 → 过滤 → 重排 → 证据门槛。</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 800 360" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+      <rect x="0" y="0" width="800" height="360" fill="#fbfcfe"/>
+      <defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker></defs>
+
+      <!-- 三路召回 -->
+      <rect x="40" y="60" width="200" height="70" rx="10" fill="#e9f5f1" stroke="#0b6e5c"/>
+      <text x="140" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="#085247">BM25 关键词</text>
+      <text x="140" y="110" text-anchor="middle" font-size="11.5" fill="#2b5a50">自研 bigram 分词，无模型依赖</text>
+
+      <rect x="280" y="60" width="200" height="70" rx="10" fill="#eef4ff" stroke="#2563eb"/>
+      <text x="380" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">Dense 向量</text>
+      <text x="380" y="110" text-anchor="middle" font-size="11.5" fill="#334155">SentenceTransformer 余弦相似</text>
+
+      <rect x="520" y="60" width="200" height="70" rx="10" fill="#f1ebfb" stroke="#6d28d9"/>
+      <text x="620" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="#4c1d95">Graph 图谱</text>
+      <text x="620" y="110" text-anchor="middle" font-size="11.5" fill="#3b1f6b">同源关系（本地 SQLite edges）</text>
+
+      <!-- QA -->
+      <rect x="280" y="150" width="200" height="54" rx="10" fill="#fdf3e3" stroke="#b45309"/>
+      <text x="380" y="172" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e">QA 语料（待复核）</text>
+      <text x="380" y="192" text-anchor="middle" font-size="11" fill="#6c3b06">不能挤占已核验来源</text>
+
+      <!-- HyDE -->
+      <rect x="40" y="150" width="200" height="54" rx="10" fill="#fdecec" stroke="#dc2626"/>
+      <text x="140" y="172" text-anchor="middle" font-size="12.5" font-weight="700" fill="#991b1b">HyDE 假设文档（可选）</text>
+      <text x="140" y="192" text-anchor="middle" font-size="11" fill="#7f1d1d">只用于检索，不是证据</text>
+
+      <!-- 融合 -->
+      <line x1="140" y1="130" x2="380" y2="240" stroke="#475569" stroke-width="1.6" marker-end="url(#a6)"/>
+      <line x1="380" y1="130" x2="380" y2="240" stroke="#475569" stroke-width="1.6" marker-end="url(#a6)"/>
+      <line x1="620" y1="130" x2="380" y2="240" stroke="#475569" stroke-width="1.6" marker-end="url(#a6)"/>
+      <line x1="140" y1="204" x2="380" y2="240" stroke="#475569" stroke-width="1.4" marker-end="url(#a6)"/>
+      <line x1="380" y1="204" x2="380" y2="240" stroke="#475569" stroke-width="1.4" marker-end="url(#a6)"/>
+
+      <rect x="260" y="240" width="240" height="60" rx="10" fill="#f6f3fb" stroke="#6d28d9"/>
+      <text x="380" y="264" text-anchor="middle" font-size="13" font-weight="700" fill="#4c1d95">加权 RRF 融合</text>
+      <text x="380" y="286" text-anchor="middle" font-size="11.5" fill="#3b1f6b">每路每文档只计一次分</text>
+
+      <line x1="380" y1="300" x2="380" y2="326" stroke="#475569" stroke-width="1.6" marker-end="url(#a6)"/>
+
+      <rect x="260" y="326" width="240" height="20" rx="6" fill="#fff" stroke="#94a3b8"/>
+      <text x="380" y="340" text-anchor="middle" font-size="11" fill="#334155">实体过滤 → CrossEncoder 重排</text>
+    </svg>
+    <figcaption><b>图 6-1</b> RAG 检索链路。注意 QA 与 HyDE 都是「辅助」而非「证据」——它们永远不能成为最终答案的引用来源。</figcaption>
+  </figure>
+
+  <h4>自研 BM25：中文 bigram 分词</h4>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/rag/BM25Retriever.py — tokenize()</div>
+    <pre><span class="cf">def</span> <span class="ck">tokenize</span>(text):
+    <span class="cc"># Chinese bi-grams preserve exact medical terms without a language-model dependency.</span>
+    text = text.lower()
+    result = re.findall(r<span class="cs">"[a-z0-9]+"</span>, text)          <span class="cc"># 英文/数字整体保留</span>
+    <span class="cf">for</span> segment <span class="cf">in</span> re.findall(r<span class="cs">"[\u4e00-\u9fff]+"</span>, text):
+        result.extend(segment[i : i + 2] <span class="cf">for</span> i <span class="cf">in</span> range(len(segment) - 1)
+                      <span class="cf">if</span> segment[i : i + 2] <span class="cf">not in</span> STOP)   <span class="cc"># 二字滑动窗口</span>
+    <span class="cf">return</span> result</pre>
+  </div>
+  <p class="muted">没有引入 jieba 等分词库，用「二字滑动窗口」把中文切成 bigram。好处：零外部依赖、医学专有名词不会因分词错误而丢失；代价：召回偏宽，但后面有 CrossEncoder 精排兜底。</p>
+
+  <h3>6.4 融合：加权 RRF（EvidenceFusion）</h3>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/rag/fusion/EvidenceFusion.py — fuse()</div>
+    <pre><span class="cf">def</span> <span class="ck">fuse</span>(*routes, k=20, weights=None):
+    <span class="cc">"""Weighted reciprocal-rank fusion, one contribution per document per route."""</span>
+    weights = weights <span class="cf">or</span> {}
+    merged = {}
+    <span class="cf">for</span> route <span class="cf">in</span> routes:
+        seen = set()
+        <span class="cf">for</span> rank, ev <span class="cf">in</span> enumerate(route, 1):
+            doc_id = ev.document.id
+            <span class="cf">if</span> doc_id <span class="cf">in</span> seen:
+                <span class="cf">continue</span>            <span class="cc"># 同路重复不重复计分</span>
+            seen.add(doc_id)
+            ...
+            <span class="cf">for</span> method, contribution <span class="cf">in</span> contributions.items():
+                item.fusion_contributions[method] = max(
+                    item.fusion_contributions.get(method, 0), contribution)
+            item.fusion_score = sum(item.fusion_contributions.values())
+    results = sorted(merged.values(), key=lambda e: (-e.fusion_score, e.document.id))[:k]</pre>
+  </div>
+  <div class="annotate"><b>要点解读</b>
+    <ul>
+      <li><b>RRF 分数 = 1/(60 + rank)</b>：排名越靠前贡献越大，常数 60 是业界常用的平滑项。</li>
+      <li><b>同一文档多路命中只算一次</b>：一个来源同时被 BM25 + Dense + Graph 命中，仍是「一份文档、一个出处」，不会因为被三个检索器命中就变成三份证据。</li>
+      <li><b>contributions 保留各路贡献明细</b>：可追溯、可评测。</li>
+    </ul>
+  </div>
+
+  <h3>6.5 重排：CrossEncoder + 覆盖率兜底</h3>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/rag/RerankerUtil.py — rerank()</div>
+    <pre><span class="cf">def</span> <span class="ck">rerank</span>(self, query, evidence, analysis, k=None):
+    ...
+    <span class="cf">for</span> i, ev <span class="cf">in</span> enumerate(evidence):
+        d = ev.document
+        overlap = len(q &amp; set(tokenize(d.title + d.text))) / max(1, len(q))
+        entity_match = (<span class="cf">not</span> analysis.entities) <span class="cf">or</span> d.entity <span class="cf">in</span> analysis.entities
+        facet_match = d.facet <span class="cf">in</span> analysis.facets <span class="cf">or</span> analysis.facets == [<span class="cs">"overview"</span>]
+        ev.relevance = 0.45 * overlap + 0.3 * entity_match + 0.25 * facet_match
+        <span class="cf">if</span> predictions <span class="cf">is not None</span>:    <span class="cc"># 有 CrossEncoder 时</span>
+            score = float(predictions[i])
+            ev.relevance = 0.5 * ev.relevance + 0.5 / (1 + math.exp(-max(-40, min(40, score))))
+    evidence.sort(key=lambda e: (e.document.review_status != <span class="cs">"source_checked"</span>, -e.relevance, ...))</pre>
+  </div>
+  <p class="muted">两层设计：无模型时用「词重叠 + 实体匹配 + 分面匹配」的启发式打分（权重 0.45/0.30/0.25），有 CrossEncoder 时把它归一化成 0–1 后按 0.5/0.5 混合。最后排序键里 <code>review_status != "source_checked"</code> 排在最前，保证「已核验」永远优先。</p>
+
+  <h3>6.6 证据门槛：EvidenceGrader（核心！）</h3>
+  <p>这是系统「宁可拒答」的第一道硬门。它决定检索回来的东西<strong>够不够格当证据</strong>。</p>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/agent/EvidenceGrader.py — grade()（节选）</div>
+    <pre><span class="cf">def</span> <span class="ck">grade</span>(self, analysis, evidence, today=None):
+    ...
+    <span class="cf">for</span> ev <span class="cf">in</span> evidence:
+        d = ev.document
+        <span class="cf">if</span> d.review_status != <span class="cs">"source_checked"</span>:
+            reasons.append(<span class="cs">"存在尚未核验来源的资料"</span>); <span class="cf">continue</span>
+        <span class="cf">if not</span> d.published_at <span class="cf">or not</span> d.checked_at:
+            reasons.append(<span class="cs">"资料缺少发布日期或核验日期"</span>); <span class="cf">continue</span>
+        age = (today - d.published_at).days
+        <span class="cf">if</span> age &lt; 0 <span class="cf">or</span> (today - d.checked_at).days &lt; 0 <span class="cf">or</span> age &gt; self.max_age_days:
+            reasons.append(<span class="cs">"资料日期不满足当前时效规则"</span>); <span class="cf">continue</span>
+        <span class="cf">if</span> analysis.entities <span class="cf">and</span> d.entity <span class="cf">not in</span> analysis.entities:
+            <span class="cf">continue</span>       <span class="cc"># 实体不匹配</span>
+        <span class="cf">if</span> ev.relevance &lt; 0.48:
+            <span class="cf">continue</span>       <span class="cc"># 相关性门槛</span>
+        eligible.append(ev)
+    ...
+    required = [(entity, facet) <span class="cf">for</span> entity <span class="cf">in</span> (analysis.entities <span class="cf">or</span> [None])
+                <span class="cf">for</span> facet <span class="cf">in</span> analysis.facets]
+    missing = []
+    <span class="cf">for</span> entity, facet <span class="cf">in</span> required:
+        <span class="cf">if not</span> any(...): missing.append(...)
+    <span class="cf">if</span> analysis.personal_treatment:
+        missing.append(<span class="cs">"个人用药决策所需的完整临床信息与专业评估"</span>)
+    <span class="cf">return</span> EvidenceGrade(sufficient=bool(eligible) <span class="cf">and not</span> missing, ...)</pre>
+  </div>
+
+  <figure class="figure">
+    <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+      <rect x="0" y="0" width="800" height="300" fill="#fbfcfe"/>
+      <defs><marker id="a66" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#475569"/></marker></defs>
+      <rect x="40" y="30" width="200" height="40" rx="8" fill="#fff" stroke="#94a3b8"/>
+      <text x="140" y="55" text-anchor="middle" font-size="12.5" fill="#334155">检索结果（evidence）</text>
+      <line x1="140" y1="70" x2="140" y2="100" stroke="#475569" stroke-width="1.6" marker-end="url(#a66)"/>
+
+      <!-- 四道闸门 -->
+      <rect x="40" y="100" width="200" height="34" rx="8" fill="#fdecec" stroke="#dc2626"/>
+      <text x="140" y="122" text-anchor="middle" font-size="12" fill="#991b1b">闸门1：review_status=source_checked？</text>
+      <line x1="140" y1="134" x2="140" y2="156" stroke="#475569" stroke-width="1.6" marker-end="url(#a66)"/>
+      <rect x="40" y="156" width="200" height="34" rx="8" fill="#fdecec" stroke="#dc2626"/>
+      <text x="140" y="178" text-anchor="middle" font-size="12" fill="#991b1b">闸门2：有发布日期 + 时效内？</text>
+      <line x1="140" y1="190" x2="140" y2="212" stroke="#475569" stroke-width="1.6" marker-end="url(#a66)"/>
+      <rect x="40" y="212" width="200" height="34" rx="8" fill="#fdecec" stroke="#dc2626"/>
+      <text x="140" y="234" text-anchor="middle" font-size="12" fill="#991b1b">闸门3：实体匹配 + 相关性≥0.48？</text>
+      <line x1="140" y1="246" x2="140" y2="268" stroke="#475569" stroke-width="1.6" marker-end="url(#a66)"/>
+      <rect x="40" y="268" width="200" height="24" rx="8" fill="#e9f7ee" stroke="#16a34a"/>
+      <text x="140" y="285" text-anchor="middle" font-size="12" fill="#15803d">通过 → eligible</text>
+
+      <rect x="320" y="100" width="200" height="150" rx="10" fill="#eef4ff" stroke="#2563eb"/>
+      <text x="420" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">覆盖校验</text>
+      <text x="420" y="150" text-anchor="middle" font-size="11.5" fill="#334155">必须覆盖「实体 × 分面」全组合</text>
+      <text x="420" y="172" text-anchor="middle" font-size="11.5" fill="#334155">个人治疗 → 强制 missing</text>
+      <text x="420" y="194" text-anchor="middle" font-size="11.5" fill="#334155">特殊人群 → 需要专门证据</text>
+      <text x="420" y="216" text-anchor="middle" font-size="11.5" fill="#334155">缺一项 → sufficient=false</text>
+      <text x="420" y="240" text-anchor="middle" font-size="11" fill="#6b7280">→ 进入反思或拒答</text>
+
+      <line x1="240" y1="280" x2="318" y2="200" stroke="#475569" stroke-width="1.6" marker-end="url(#a66)"/>
+      <text x="600" y="130" font-size="12" fill="#7f1d1d">⛔ 任何一项不满足 → 该文档不能作证据</text>
+      <text x="600" y="152" font-size="12" fill="#334155">这就是「宁可拒答」的实现</text>
+    </svg>
+    <figcaption><b>图 6-2</b> 证据门槛四道闸门 + 覆盖校验。这是整个系统「保守」性格的具象化。</figcaption>
+  </figure>
+
+  <h3>6.7 反思：受限的反思循环（ReflectionService）</h3>
+  <p>证据不足时进入反思。但反思<strong>不是让模型自由发挥</strong>，而是「在代码允许的动作里做选择」。</p>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/agent/AgentPolicy.py — 白名单 + 校验</div>
+    <pre><span class="cf">class</span> <span class="ck">AgentDecision</span>(BaseModel):
+    model_config = ConfigDict(extra=<span class="cs">"forbid"</span>)   <span class="cc"># 多余字段直接拒绝</span>
+    action: Literal[<span class="cs">"rewrite"</span>, <span class="cs">"hyde"</span>, <span class="cs">"stop"</span>]   <span class="cc"># 只允许这三个动作</span>
+    query: str = Field(default=<span class="cs">""</span>, max_length=400)
+    reason_code: Literal[<span class="cs">"missing_facet"</span>, <span class="cs">"vocabulary_gap"</span>,
+                         <span class="cs">"insufficient_sources"</span>, <span class="cs">"no_progress"</span>]
+
+<span class="cf">class</span> <span class="ck">AgentPolicy</span>:
+    <span class="cc">"""Code, never the model, grants capabilities and enforces the retry budget."""</span>
+
+    <span class="cf">def</span> <span class="ck">allowed</span>(self, analysis, iteration, progressed, dense_available, hyde_used):
+        <span class="cf">if</span> (analysis.emergency <span class="cf">or</span> analysis.personal_treatment
+            <span class="cf">or</span> analysis.constraints <span class="cf">or</span> iteration &gt;= self.settings.max_iterations
+            <span class="cf">or not</span> progressed):
+            <span class="cf">return</span> [<span class="cs">"stop"</span>]    <span class="cc"># 触发安全/上限/无进展 → 只能停</span>
+        actions = [<span class="cs">"rewrite"</span>, <span class="cs">"stop"</span>]
+        <span class="cf">if</span> dense_available <span class="cf">and not</span> hyde_used:
+            actions.insert(1, <span class="cs">"hyde"</span>)
+        <span class="cf">return</span> actions</pre>
+  </div>
+  <div class="callout key"><span class="ttl">模型永远只是「提候选」</span><code>ReflectionService.reflect</code> 把模型返回的 JSON 交给 <code>policy.validate()</code>：如果 action 不在 allowed 白名单里，直接 <code>raise ValueError</code>。所以即使模型「想」执行 SQL 或访问网址，代码层直接拒绝——<strong>能力是代码授予的，不是模型自带的</strong>。</div>
+
+  <h3>6.8 答案校验：AnswerGrader（防幻觉核心！）</h3>
+  <p>这是本项目最有技术含量的一段。它的逻辑极其简单，却从机制上掐死了「模型瞎编」。</p>
+  <div class="code">
+    <div class="codebar"><span class="dot" style="background:#f87171"></span><span class="dot" style="background:#fbbf24"></span><span class="dot" style="background:#34d399"></span>backend/agent/AnswerGrader.py — grade()（节选）</div>
+    <pre><span class="cf">def</span> <span class="ck">grade</span>(self, draft, evidence, analysis):
+    by_id = {ev.document.id: ev <span class="cf">for</span> ev <span class="cf">in</span> evidence}
+    <span class="cf">for</span> claim <span class="cf">in</span> draft.claims:
+        <span class="cf">if</span> len(claim.evidence_ids) != len(claim.quotes):
+            errors.append(<span class="cs">"引用与原文片段未一一对应"</span>)
+        <span class="cf">for</span> doc_id, quote <span class="cf">in</span> zip(claim.evidence_ids, claim.quotes):
+            ev = by_id.get(doc_id)
+            <span class="cf">if not</span> ev <span class="cf">or</span> ev.document.review_status != <span class="cs">"source_checked"</span>:
+                errors.append(<span class="cs">"引用指向不可用证据"</span>)
+            <span class="cf">elif</span> quote <span class="cf">not in</span> ev.document.text <span class="cf">or</span> len(quote.strip()) &lt; 8:
+                errors.append(<span class="cs">"引用片段不在来源原文中"</span>)
+        <span class="cc"># Exact extract mode: no model-written medical inference can pass this gate.</span>
+        <span class="cf">if</span> claim.text != <span class="cs">""</span>.join(claim.quotes):
+            errors.append(<span class="cs">"出现不受原文支持的改写或推论"</span>)
+    ...
+    <span class="cf">return</span> AnswerGrade(grounded=<span class="cf">not</span> errors, relevant=relevant, complete=complete, ...)</pre>
+  </div>
+
+  <figure class="figure">
+    <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">
+      <rect x="0" y="0" width="800" height="320" fill="#fbfcfe"/>
+      <rect x="40" y="30" width="340" height="260" rx="12" fill="#e9f7ee" stroke="#16a34a"/>
+      <text x="60" y="58" font-size="14" font-weight="700" fill="#15803d">✅ 能通过校验的答案</text>
+      <text x="60" y="84" font-size="12.5" fill="#14532d">claim.text = 「高血压常见症状包括头晕、头痛…」</text>
+      <text x="60" y="106" font-size="12.5" fill="#14532d">claim.quotes = [「高血压常见症状包括头晕、头痛…」]</text>
+      <text x="60" y="128" font-size="12.5" fill="#14532d">text == quotes 拼接 ✅</text>
+      <text x="60" y="150" font-size="12.5" fill="#14532d">quote 逐字出现在原文 ✅</text>
+      <text x="60" y="172" font-size="12.5" fill="#14532d">覆盖全部实体×分面 ✅</text>
+      <rect x="60" y="200" width="300" height="60" rx="8" fill="#16a34a"/>
+      <text x="210" y="224" text-anchor="middle" font-size="13" fill="#fff" font-weight="600">grounded = true</text>
+      <text x="210" y="246" text-anchor="middle" font-size="11.5" fill="#e9f7ee">结果 status = answered</text>
+
+      <rect x="420" y="30" width="340" height="260" rx="12" fill="#fdecec" stroke="#dc2626"/>
+      <text x="440" y="58" font-size="14" font-weight="700" fill="#991b1b">❌ 无法通过校验的答案</text>
+      <text x="440" y="84" font-size="12.5" fill="#7f1d1d">模型「改写」：把原文润色成新句子</text>
+      <text x="440" y="106" font-size="12.5" fill="#7f1d1d">text ≠ quotes 拼接 → 拒绝</text>
+      <text x="440" y="134" font-size="12.5" fill="#7f1d1d">模型「推理」：补一句原文没有的结论</text>
+      <text x="440" y="156" font-size="12.5" fill="#7f1d1d">新句子不在原文 → 拒绝</text>
+      <text x="440" y="184" font-size="12.5" fill="#7f1d1d">模型「张冠李戴」：引用不存在的文档</text>
+      <text x="440" y="206" font-size="12.5" fill="#7f1d1d">doc_id 不在 evidence → 拒绝</text>
+      <rect x="440" y="232" width="300" height="40" rx="8" fill="#dc2626"/>
+      <text x="590" y="257" text-anchor="middle" font-size="13" fill="#fff" font-weight="600">回退原文摘录 / 拒答</text>
+    </svg>
+    <figcaption><b>图 6-3</b> 答案校验逻辑。核心只有一句：<code>text == "".join(quotes)</code>。这一行代码，就杜绝了「不受原文支持」的任何输出。</figcaption>
+  </figure>
+
+  <div class="callout tip"><span class="ttl">理解这一行的价值</span>普通 RAG 是「模型读文档，然后写一段自己的话」，幻觉风险靠 prompt 压制。这里反过来：模型只能「挑原文、排顺序」，输出的 <code>text</code> 必须等于所选 <code>quotes</code> 的机械拼接。校验器用纯代码（字符串相等 + 子串匹配）就能判断真假，<strong>不依赖模型自评</strong>。这就是为什么项目能坦然写「从机制上阻断幻觉」。</div>
+</section>
